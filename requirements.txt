@@ -1,0 +1,23 @@
+# RAG Ingestion Pipeline Dependencies
+# ====================================
+# Core framework and orchestration
+langchain>=0.1.0
+langchain-community>=0.0.20
+langchain-google-vertexai>=1.0.0
+
+# PDF processing
+pypdf>=3.17.0
+
+# Vector database
+chromadb>=0.4.22
+
+# Google Cloud Platform services
+google-cloud-aiplatform>=1.38.0
+google-cloud-storage>=2.14.0
+google-auth>=2.25.0
+
+# Additional utilities (required by LangChain and ChromaDB)
+pydantic>=2.5.0
+numpy>=1.24.0
+tenacity>=8.2.0
+
