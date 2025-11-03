@@ -1,0 +1,26 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Admin-only upload area for document staging
+    // Path: /admin/uploads/{allPaths=**}
+    match /admin/uploads/{allPaths=**} {
+      // Allow read access to authenticated users (admins can read their uploads)
+      allow read: if request.auth != null;
+      
+      // Allow write (upload) only for authenticated admin users
+      allow write: if request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      
+      // Allow delete only for authenticated admin users
+      allow delete: if request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Default: deny all other paths for security
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

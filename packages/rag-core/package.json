@@ -1,0 +1,26 @@
+{
+  "name": "@minewise-ai/rag-core",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@google-cloud/firestore": "^7.1.0",
+    "@langchain/openai": "^0.0.14",
+    "@langchain/community": "^0.0.20",
+    "@langchain/core": "^0.1.23",
+    "@pinecone-database/pinecone": "^2.0.1",
+    "pdf-parse": "^1.1.1",
+    "mammoth": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/pdf-parse": "^1.1.4",
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,64 @@
+# Cloud Build configuration for Cloud Run deployment
+# Build and deploy the RAG API service
+
+steps:
+  # Step 1: Install dependencies and build TypeScript
+  - name: 'node:18'
+    entrypoint: 'npm'
+    args: ['install', '-g', 'pnpm']
+  
+  - name: 'node:18'
+    entrypoint: 'pnpm'
+    args: ['install', '--frozen-lockfile']
+  
+  - name: 'node:18'
+    entrypoint: 'pnpm'
+    args: ['run', 'build']
+    dir: 'apps/functions'
+
+  # Step 2: Build Docker image
+  # Build context must be the project root to access pnpm-lock.yaml
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/minewise-rag-api:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/minewise-rag-api:latest'
+      - '-f'
+      - 'apps/functions/Dockerfile'
+      - '.'
+
+  # Step 3: Push Docker image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/minewise-rag-api:$COMMIT_SHA']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/minewise-rag-api:latest']
+
+  # Step 4: Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'minewise-rag-api'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/minewise-rag-api:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--port'
+      - '8080'
+      - '--set-env-vars'
+      - 'GOOGLE_CLOUD_PROJECT_ID=$PROJECT_ID'
+
+images:
+  - 'gcr.io/$PROJECT_ID/minewise-rag-api:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/minewise-rag-api:latest'
+
+options:
+  machineType: 'E2_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY

@@ -1,0 +1,34 @@
+{
+  "name": "minewise-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Minewise AI - RAG application for mining regulations in Zambia",
+  "scripts": {
+    "setup": "pnpm install && node scripts/setup.js",
+    "init-firestore": "node scripts/init-firestore.js",
+    "apply-cors": "powershell -ExecutionPolicy Bypass -File scripts/apply-cors.ps1",
+    "auth-gcloud": "powershell -ExecutionPolicy Bypass -File scripts/authenticate-gcloud.ps1",
+    "create-artifact-registry": "powershell -ExecutionPolicy Bypass -File scripts/create-artifact-registry.ps1",
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "deploy": "turbo run build && firebase deploy"
+  },
+  "devDependencies": {
+    "turbo": "^1.11.2",
+    "typescript": "^5.3.3"
+  },
+  "packageManager": "pnpm@8.15.0",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}
+
+
