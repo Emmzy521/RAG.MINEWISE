@@ -19,7 +19,7 @@ VITE_FIREBASE_APP_ID=your_app_id
 VITE_FUNCTIONS_URL=http://localhost:5001/minewise-ai-dev/us-central1/api
 `,
 
-  'apps/functions/.env.local': `# OpenAI Configuration
+  'functions/.env.local': `# OpenAI Configuration
 OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_MODEL=gpt-4
 

@@ -62,7 +62,7 @@ export async function apiCall<T>(procedure: string, input?: any): Promise<T> {
       console.error('❌ Network Error:', error);
       throw new Error(
         'Cannot connect to the API server. Please ensure:\n' +
-        '1. The backend server is running (cd apps/functions && pnpm dev)\n' +
+        '1. The backend server is running (cd functions && pnpm dev)\n' +
         '2. The server is accessible at http://localhost:5001\n' +
         '3. Check browser console for CORS errors'
       );

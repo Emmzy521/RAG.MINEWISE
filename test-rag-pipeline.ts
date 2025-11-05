@@ -15,8 +15,8 @@
 import 'dotenv/config';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { retrieveTopKChunks } from './apps/functions/src/retrieval';
-import { generateGroundedResponse } from './apps/functions/src/generation';
+import { retrieveTopKChunks } from './functions/src/retrieval';
+import { generateGroundedResponse } from './functions/src/generation';
 
 // Set Google Cloud Project ID
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID || process.env.GCP_PROJECT_ID || 'minewise-ai-4a4da';

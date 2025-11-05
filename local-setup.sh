@@ -37,11 +37,11 @@ echo "✅ Dependencies installed successfully"
 echo ""
 
 # Step 2: Build the functions package
-echo "🔨 Step 2: Building apps/functions package..."
-pnpm run --filter apps/functions build
+echo "🔨 Step 2: Building functions package..."
+pnpm run --filter @minewise-ai/functions build
 
 if [ $? -ne 0 ]; then
-    echo "❌ Failed to build apps/functions"
+    echo "❌ Failed to build functions"
     exit 1
 fi
 
@@ -51,8 +51,8 @@ echo ""
 echo "✨ Local setup complete!"
 echo ""
 echo "📝 Next steps:"
-echo "   - Your TypeScript code is compiled to apps/functions/dist/"
-echo "   - You can test locally: cd apps/functions && node dist/server.js"
+echo "   - Your bundled code is in functions/lib/"
+echo "   - You can test locally: cd functions && pnpm dev"
 echo "   - Deploy to Cloud Run: gcloud builds submit --config=cloudbuild.yaml"
 echo ""
 

@@ -1,6 +1,6 @@
 # Cloud Build configuration for RAG API Docker image
 # Build context: Project root (monorepo)
-# Dockerfile location: apps/functions/Dockerfile
+# Dockerfile location: functions/Dockerfile
 
 steps:
   # Step 1: Build the Docker image
@@ -8,7 +8,7 @@ steps:
     args: [
       'build',
       '-t', 'gcr.io/$PROJECT_ID/rag-api:latest',
-      '-f', 'apps/functions/Dockerfile',  # Specifies the location of the Dockerfile
+      '-f', 'functions/Dockerfile',  # Specifies the location of the Dockerfile
       '.'                                 # Sets the build context to the Project Root ('.')
     ]
 

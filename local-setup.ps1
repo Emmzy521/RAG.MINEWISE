@@ -37,11 +37,11 @@ Write-Host "✅ Dependencies installed successfully" -ForegroundColor Green
 Write-Host ""
 
 # Step 2: Build the functions package
-Write-Host "🔨 Step 2: Building apps/functions package..." -ForegroundColor Cyan
-pnpm run --filter apps/functions build
+Write-Host "🔨 Step 2: Building functions package..." -ForegroundColor Cyan
+pnpm run --filter @minewise-ai/functions build
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Failed to build apps/functions" -ForegroundColor Red
+    Write-Host "❌ Failed to build functions" -ForegroundColor Red
     exit 1
 }
 
@@ -51,8 +51,8 @@ Write-Host ""
 Write-Host "✨ Local setup complete!" -ForegroundColor Green
 Write-Host ""
 Write-Host "📝 Next steps:" -ForegroundColor Cyan
-Write-Host "   - Your TypeScript code is compiled to apps/functions/dist/"
-Write-Host "   - You can test locally: cd apps/functions; node dist/server.js"
+Write-Host "   - Your bundled code is in functions/lib/"
+Write-Host "   - You can test locally: cd functions && pnpm dev"
 Write-Host "   - Deploy to Cloud Run: gcloud builds submit --config=cloudbuild.yaml"
 Write-Host ""
 
