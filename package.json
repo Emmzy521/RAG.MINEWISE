@@ -28,7 +28,12 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "pnpm": {
+    "overrides": {
+      "esbuild": "^0.25.11"
+    }
+  }
 }
 
 

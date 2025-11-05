@@ -28,7 +28,7 @@ export class DocumentChunker {
   ): Promise<DocumentChunk[]> {
     const chunks = await this.splitter.splitText(text);
     
-    return chunks.map((content, index) => ({
+    return chunks.map((content: string, index: number) => ({
       id: `${documentId}-chunk-${index}`,
       documentId,
       content,

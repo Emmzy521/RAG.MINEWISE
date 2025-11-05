@@ -1,4 +1,4 @@
-import { Firestore } from '@google-cloud/firestore';
+import { Firestore, FieldValue } from '@google-cloud/firestore';
 
 export interface ChunkData {
   content: string;
@@ -42,7 +42,7 @@ export async function saveChunksToFirestore(
           documentId: chunk.documentId,
           source: chunk.source,
           pageNumber: chunk.pageNumber,
-          createdAt: Firestore.FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
         });
       });
 

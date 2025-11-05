@@ -7,11 +7,14 @@ import { Search, FileText, Loader2 } from 'lucide-react';
 
 interface QueryResponse {
   answer: string;
+  citations: string[];
   sources: Array<{
     documentId: string;
     chunkId: string;
     content: string;
     score: number;
+    source: string;
+    pageNumber?: number;
   }>;
 }
 
@@ -116,11 +119,12 @@ export default function Query() {
                         <span className="font-medium">Source {idx + 1}</span>
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        Score: {(source.score * 100).toFixed(1)}%
+                        Similarity: {(source.score * 100).toFixed(1)}%
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">
-                      Document: {source.documentId} • Chunk: {source.chunkId}
+                      {source.source}
+                      {source.pageNumber && ` • Page ${source.pageNumber}`}
                     </p>
                     <p className="text-sm">{source.content}</p>
                   </div>
@@ -128,6 +132,24 @@ export default function Query() {
               </div>
             </CardContent>
           </Card>
+
+          {response.citations && response.citations.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Citations</CardTitle>
+                <CardDescription>Referenced documents</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="list-disc list-inside space-y-1">
+                  {response.citations.map((citation, idx) => (
+                    <li key={idx} className="text-sm text-muted-foreground">
+                      {citation}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="bg-blue-50 border-blue-200">
             <CardContent className="pt-6">

@@ -1,27 +1,27 @@
-import { Firestore } from '@google-cloud/firestore';
-import { getQuestionVector } from './helpers/vector-helpers';
-import { cosineSimilarity } from './helpers/vector-helpers';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getQuestionVector } from './helpers/vector-helpers.js';
+import { cosineSimilarity } from './helpers/vector-helpers.js';
 import * as logger from 'firebase-functions/logger'; // <--- FIX: Added necessary import
 
 // Type definitions
 interface ChunkDocument {
-  id: string;
-  content: string;
-  embedding: number[];
-  documentId: string;
-  source: string;
-  pageNumber: number;
-  embeddingDim?: number;
-  createdAt?: any;
+  id: string;
+  content: string;
+  embedding: number[];
+  documentId: string;
+  source: string;
+  pageNumber: number;
+  embeddingDim?: number;
+  createdAt?: any;
 }
 
 interface RetrievedChunk {
-  id: string;
-  content: string;
-  documentId: string;
-  source: string;
-  pageNumber: number;
-  similarity: number;
+  id: string;
+  content: string;
+  documentId: string;
+  source: string;
+  pageNumber: number;
+  similarity: number;
 }
 
 /**
@@ -32,13 +32,13 @@ interface RetrievedChunk {
  * @returns Promise resolving to an array of the top K most similar chunks with similarity scores
  */
 export async function retrieveTopKChunks(
-  query: string,
-  k: number = 5
+  query: string,
+  k: number = 5
 ): Promise<RetrievedChunk[]> {
-  try {
-    // 1. Initialize Firestore database client
-    const db = new Firestore();
-    const collectionRef = db.collection('vectorChunks');
+  try {
+    // 1. Get Firestore database client (use Firebase Admin instance)
+    const db = getFirestore();
+    const collectionRef = db.collection('vectorChunks');
 
     logger.log(`🔍 Starting semantic search for query: "${query}" (k=${k}, min_similarity=0.7)`); // Uses logger
 

@@ -15,7 +15,7 @@ const firebaseConfig = {
 };
 
 // Check if required config is missing
-const missingConfig = Object.entries(firebaseConfig).filter(([key, value]) => !value || value.includes('your_'));
+const missingConfig = Object.entries(firebaseConfig).filter(([, value]) => !value || value.includes('your_'));
 
 if (missingConfig.length > 0 && import.meta.env.DEV) {
   console.warn('⚠️ Missing Firebase configuration:', missingConfig.map(([key]) => key).join(', '));

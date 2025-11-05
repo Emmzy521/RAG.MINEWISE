@@ -6,11 +6,12 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "dev": "tsx --watch --tsconfig tsconfig.json src/server.ts",
-    "server": "node dist/server.js",
+    "dev": "tsx --watch --tsconfig tsconfig.json src/server-dev.ts",
+    "server": "node dist/server-dev.js",
+    "server:prod": "node dist/server.js",
     "clean": "rm -rf dist",
     "type-check": "tsc --noEmit",
-    "lint": "eslint src --ext .ts",
+    "lint": "npx eslint src --ext .ts",
     "serve": "firebase emulators:start --only functions",
     "deploy": "firebase deploy --only functions"
   },
@@ -31,6 +32,7 @@
     "@types/node": "^20.10.5",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
+    "dotenv": "^17.2.3",
     "eslint": "^8.56.0",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
@@ -39,5 +41,3 @@
     "node": "20"
   }
 }
-
-
