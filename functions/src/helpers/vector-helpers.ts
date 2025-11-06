@@ -71,13 +71,21 @@ export async function getQuestionVector(query: string): Promise<number[]> {
   }
 
   try {
-    const project = process.env.GOOGLE_CLOUD_PROJECT_ID || process.env.GCP_PROJECT_ID;
+    // Try multiple sources for project ID (Firebase Functions provides GCLOUD_PROJECT)
+    const project = 
+      process.env.GOOGLE_CLOUD_PROJECT_ID || 
+      process.env.GCP_PROJECT_ID || 
+      process.env.GCLOUD_PROJECT ||
+      process.env.GOOGLE_CLOUD_PROJECT;
     const location = 'us-central1';
     const model = 'text-embedding-004';
     
     if (!project) {
-      throw new Error('GOOGLE_CLOUD_PROJECT_ID or GCP_PROJECT_ID environment variable must be set');
+      logger.error('❌ Project ID not found in environment variables. Available env vars:', Object.keys(process.env).filter(k => k.includes('PROJECT')));
+      throw new Error('GOOGLE_CLOUD_PROJECT_ID, GCP_PROJECT_ID, or GCLOUD_PROJECT environment variable must be set');
     }
+    
+    logger.log(`🔧 Using Google Cloud Project: ${project} for embeddings API`);
 
     // Use Vertex AI REST API for embeddings
     // The endpoint format: https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}/publishers/google/models/{model}:predict

@@ -40,7 +40,7 @@ export async function retrieveTopKChunks(
     const db = getFirestore();
     const collectionRef = db.collection('vectorChunks');
 
-    logger.log(`🔍 Starting semantic search for query: "${query}" (k=${k}, min_similarity=0.7)`); // Uses logger
+    logger.log(`🔍 Starting semantic search for query: "${query}" (k=${k}, min_similarity=0.5)`); // Uses logger
 
     // 2. Get the query vector
     const queryVector = await getQuestionVector(query);
@@ -73,11 +73,14 @@ export async function retrieveTopKChunks(
         return;
       }
 
-      // Calculate the similarity score
-      const similarity = cosineSimilarity(queryVector, chunkData.embedding);
+      // Calculate the similarity score
+      const similarity = cosineSimilarity(queryVector, chunkData.embedding);
 
-      // Keep only chunks where similarity score is greater than 0.7
-      if (similarity > 0.7) {
+      // Keep only chunks where similarity score is greater than 0.5 (lowered from 0.7 for better recall)
+      // You can adjust this threshold based on your needs:
+      // - Higher (0.7-0.8): More precise, fewer results
+      // - Lower (0.5-0.6): More results, may include less relevant content
+      if (similarity > 0.5) {
         chunksWithScores.push({
           id: doc.id,
           content: chunkData.content,
@@ -89,7 +92,7 @@ export async function retrieveTopKChunks(
       }
     });
 
-    logger.log(`🔍 Filtered to ${chunksWithScores.length} chunks with similarity > 0.7`); // Uses logger
+    logger.log(`🔍 Filtered to ${chunksWithScores.length} chunks with similarity > 0.5`); // Uses logger
 
     // 5. Sort the filtered chunks by their similarity score in DESCENDING order
     chunksWithScores.sort((a, b) => b.similarity - a.similarity);
@@ -103,7 +106,7 @@ export async function retrieveTopKChunks(
         `(similarity range: ${topKChunks[topKChunks.length - 1]?.similarity.toFixed(4)} - ${topKChunks[0]?.similarity.toFixed(4)})`
       );
     } else {
-      logger.warn(`⚠️  No chunks found with similarity > 0.7 for query: "${query}"`); // Uses logger
+      logger.warn(`⚠️  No chunks found with similarity > 0.5 for query: "${query}"`); // Uses logger
     }
 
     return topKChunks;

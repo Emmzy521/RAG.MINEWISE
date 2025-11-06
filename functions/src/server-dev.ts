@@ -172,8 +172,43 @@ app.post('/api', async (req: Request, res: Response) => {
       return res.status(500).json({ error: 'Router not initialized' });
     }
 
-    const caller = appRouter.createCaller({ userId });
-    console.log('🔧 Created tRPC caller for userId:', userId || 'anonymous');
+    // Create context object explicitly to ensure it's a plain object
+    // tRPC expects a context object, not undefined values
+    const context: { userId?: string } = {};
+    if (userId) {
+      context.userId = userId;
+    }
+    console.log('🔧 Creating tRPC caller with context:', JSON.stringify(context));
+    
+    // Try creating caller - check if it's actually a function or object
+    let caller: any;
+    try {
+      caller = appRouter.createCaller(context);
+      console.log('🔧 Created tRPC caller for userId:', userId || 'anonymous');
+      console.log('🔧 Caller type:', typeof caller);
+      console.log('🔧 Caller value:', caller);
+      console.log('🔧 Caller constructor:', caller?.constructor?.name);
+      
+      // If caller is a function, it might be a proxy that appears as a function
+      // Try to access properties to see if it's actually a proxy
+      if (typeof caller === 'function') {
+        console.log('⚠️ Caller is a function - might be a proxy');
+        // Try to see if it has properties when accessed
+        try {
+          const testAccess = caller.query;
+          console.log('🔧 caller.query accessed:', typeof testAccess, testAccess);
+        } catch (e) {
+          console.log('🔧 Error accessing caller.query:', e);
+        }
+      } else {
+        console.log('🔧 Caller is an object');
+        console.log('🔧 Caller keys:', Object.keys(caller));
+        console.log('🔧 Caller has query?', 'query' in caller);
+      }
+    } catch (callerError: any) {
+      console.error('❌ Error creating caller:', callerError);
+      return res.status(500).json({ error: `Failed to create tRPC caller: ${callerError.message}` });
+    }
     console.log('🔧 Procedure type:', typeof procedure, 'Procedure value:', procedure);
     console.log('🔧 Procedure is string?:', typeof procedure === 'string');
     
@@ -200,65 +235,102 @@ app.post('/api', async (req: Request, res: Response) => {
 
     // Execute the tRPC Procedure
     let result;
+    const originalInput = input; // Store original input before any modifications
     console.log('🔍 Calling procedure:', procedure, 'Type:', typeof procedure, 'with input:', JSON.stringify(input, null, 2));
-
-    // Validate input exists
-    if (input === undefined) {
-      input = {};
-    }
 
     try {
       // tRPC createCaller returns a proxy, so we call methods directly
-      // The proxy will handle method resolution and throw appropriate errors if not found
-      // Ensure procedure is a string before using in switch
-      const procedureName = String(procedure); // Force string conversion
+      // Use a switch statement to ensure type safety and correct procedure calls
+      const procedureName = String(procedure).trim(); // Force string conversion and trim
+      
+      console.log(`📝 Calling procedure '${procedureName}' with input:`, JSON.stringify(originalInput, null, 2));
+      
+      // Use switch statement for explicit procedure routing
+      // This ensures we're calling the correct procedure with the right signature
       switch (procedureName) {
+        case 'health':
+          result = await caller.health();
+          break;
         case 'uploadDocument':
-          result = await caller.uploadDocument(input);
+          if (!originalInput || typeof originalInput !== 'object') {
+            throw new Error('uploadDocument requires an input object');
+          }
+          result = await caller.uploadDocument(originalInput);
           break;
         case 'query':
-          console.log('📝 Calling query procedure with input:', JSON.stringify(input, null, 2));
-          console.log('📝 Procedure name:', procedureName, 'Type:', typeof procedureName);
+          if (!originalInput || typeof originalInput !== 'object') {
+            throw new Error('query requires an input object with query field');
+          }
+          if (!originalInput.query) {
+            throw new Error('query input must include a "query" field');
+          }
+          // Ensure input is a plain object (not a proxy or special object)
+          const queryInput = {
+            query: String(originalInput.query),
+            topK: originalInput.topK ? Number(originalInput.topK) : 5
+          };
+          console.log('📝 About to call query procedure with:', JSON.stringify(queryInput, null, 2));
           
-          if (!input || typeof input !== 'object') {
-            throw new Error('Query input must be an object with query and optional topK');
+          // WORKAROUND: The tRPC proxy seems to be broken for mutations
+          // Let's manually call the procedure by importing and calling the handler directly
+          // This bypasses the createCaller proxy which appears to be malfunctioning
+          
+          console.log('📝 Using workaround: calling procedure handler directly');
+          
+          // Import the router's query procedure handler directly
+          // We'll need to manually construct the context and call the procedure
+          const procedureContext = { userId: context.userId };
+          
+          // Access the router's internal procedure definition
+          // tRPC stores procedures in _def.procedures
+          const routerDef = (appRouter as any)._def;
+          if (routerDef && routerDef.procedures) {
+            const queryProcedure = routerDef.procedures.query;
+            if (queryProcedure) {
+              console.log('📝 Found query procedure in router definition');
+              // Call the procedure's resolver directly
+              const procedureResolver = queryProcedure._def?.resolver;
+              if (procedureResolver) {
+                console.log('📝 Calling procedure resolver directly');
+                result = await procedureResolver({
+                  input: queryInput,
+                  ctx: procedureContext,
+                  path: 'query',
+                  type: 'mutation',
+                });
+              } else {
+                throw new Error('Could not find procedure resolver');
+              }
+            } else {
+              throw new Error('Could not find query procedure in router');
+            }
+          } else {
+            // Fallback: try createCaller one more time with explicit typing
+            console.log('📝 Fallback: trying createCaller with explicit context');
+            const finalCaller = appRouter.createCaller(procedureContext);
+            result = await (finalCaller as any).query(queryInput);
           }
           
-          // Ensure input has required fields
-          if (!input.query) {
-            throw new Error('Query input must include a "query" field');
-          }
-          
-          // Directly call the method - tRPC proxy will handle it
-          console.log('📝 About to call caller.query()...');
-          console.log('📝 Caller type:', typeof caller);
-          console.log('📝 caller.query type:', typeof caller.query);
-          
-          if (typeof caller.query !== 'function') {
-            throw new Error(`caller.query is not a function. Type: ${typeof caller.query}`);
-          }
-          
-          result = await caller.query(input);
-          console.log('📝 Query procedure returned successfully');
+          console.log('📝 Query procedure completed successfully');
           break;
         case 'getDocuments':
           result = await caller.getDocuments();
           break;
         case 'deleteDocument':
-          result = await caller.deleteDocument(input);
+          if (!originalInput || typeof originalInput !== 'object') {
+            throw new Error('deleteDocument requires an input object');
+          }
+          result = await caller.deleteDocument(originalInput);
           break;
         case 'getDashboardStats':
           result = await caller.getDashboardStats();
           break;
-        case 'health':
-          result = await caller.health();
-          break;
         default:
-          console.warn(`⚠️ Unknown procedure: ${procedure}`);
-          return res.status(404).json({ error: `Procedure '${procedure}' not found` });
+          console.warn(`⚠️ Unknown procedure: ${procedureName}`);
+          return res.status(404).json({ error: `Procedure '${procedureName}' not found` });
       }
-
-      console.log('✅ Procedure executed successfully');
+      
+      console.log(`✅ Procedure '${procedureName}' executed successfully`);
       res.json(result);
     } catch (procedureError: any) {
       console.error('❌ Procedure execution error:', procedureError);

@@ -117,15 +117,9 @@ importers:
 
   functions:
     dependencies:
-      '@google-cloud/aiplatform':
-        specifier: ^3.10.0
-        version: 3.35.0
-      '@google-cloud/firestore':
-        specifier: ^7.1.0
-        version: 7.11.6
       '@minewise-ai/rag-core':
-        specifier: workspace:*
-        version: link:../packages/rag-core
+        specifier: file:../packages/rag-core
+        version: file:packages/rag-core(firebase-admin@12.7.0)
       '@trpc/server':
         specifier: ^10.45.0
         version: 10.45.2
@@ -183,7 +177,7 @@ importers:
         version: 7.11.6
       '@langchain/community':
         specifier: ^0.0.20
-        version: 0.0.20(@pinecone-database/pinecone@2.2.2)
+        version: 0.0.20(@pinecone-database/pinecone@2.2.2)(firebase-admin@12.7.0)
       '@langchain/core':
         specifier: ^0.1.23
         version: 0.1.63(openai@4.104.0)
@@ -1170,17 +1164,6 @@ packages:
     resolution: {integrity: sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ==}
     dev: false
 
-  /@google-cloud/aiplatform@3.35.0:
-    resolution: {integrity: sha512-Eo+ckr1KbTxAOew9P+MeeR0aQXeW5PeOzrSM1JyGny/SGKejwX/RcGWSFpeapnlegTfI9N9xJeUeo3M+XBOeFg==}
-    engines: {node: '>=14.0.0'}
-    dependencies:
-      google-gax: 4.6.1
-      protobuf.js: 1.1.2
-    transitivePeerDependencies:
-      - encoding
-      - supports-color
-    dev: false
-
   /@google-cloud/firestore@7.11.6:
     resolution: {integrity: sha512-EW/O8ktzwLfyWBOsNuhRoMi8lrC3clHM5LVFhGvO1HCsLozCOOXRAlHrYBoE6HL42Sc8yYMuCb2XqcnJ4OOEpw==}
     engines: {node: '>=14.0.0'}
@@ -1350,7 +1333,7 @@ packages:
     requiresBuild: true
     dev: false
 
-  /@langchain/community@0.0.20(@pinecone-database/pinecone@2.2.2):
+  /@langchain/community@0.0.20(@pinecone-database/pinecone@2.2.2)(firebase-admin@12.7.0):
     resolution: {integrity: sha512-maPMjvF50Z+4eMs7HKmY3wfT+k6IjULqLUVPtVdN1zSGobRvnUIbQMKUY2IXVTZmaMXKBAIob+49X8vjO2snDQ==}
     engines: {node: '>=18'}
     peerDependencies:
@@ -1599,6 +1582,7 @@ packages:
       '@langchain/core': 0.1.63(openai@4.104.0)
       '@langchain/openai': 0.0.14
       '@pinecone-database/pinecone': 2.2.2
+      firebase-admin: 12.7.0
       flat: 5.0.2
       langsmith: 0.0.70
       uuid: 9.0.1
@@ -4533,11 +4517,6 @@ packages:
     resolution: {integrity: sha512-Sb487aTOCr9drQVL8pIxOzVhafOjZN9UU54hiN8PU3uAiSV7lx1yYNpbNmex2PK6dSJoNTSJUUswT651yww3Mg==}
     dev: false
 
-  /long@1.1.5:
-    resolution: {integrity: sha512-TU6nAF5SdasnTr28c7e74P4Crbn9o3/zwo1pM22Wvg2i2vlZ4Eelxwu4QT7j21z0sDBlJDEnEZjXTZg2J8WJrg==}
-    engines: {node: '>=0.6'}
-    dev: false
-
   /long@5.3.2:
     resolution: {integrity: sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA==}
     dev: false
@@ -5057,12 +5036,6 @@ packages:
     requiresBuild: true
     dependencies:
       protobufjs: 7.5.4
-    dev: false
-
-  /protobuf.js@1.1.2:
-    resolution: {integrity: sha512-USO7Xus/pzPw549M1TguiyoOrKEhm9VMXv+CkDufcjMC8Rd7EPbxeRQPEjCV8ua1tm0k7z9xHkogcxovZogWdA==}
-    dependencies:
-      long: 1.1.5
     dev: false
 
   /protobufjs@7.5.4:
@@ -6031,4 +6004,102 @@ packages:
 
   /zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+    dev: false
+
+  file:packages/rag-core(firebase-admin@12.7.0):
+    resolution: {directory: packages/rag-core, type: directory}
+    id: file:packages/rag-core
+    name: '@minewise-ai/rag-core'
+    dependencies:
+      '@google-cloud/firestore': 7.11.6
+      '@langchain/community': 0.0.20(@pinecone-database/pinecone@2.2.2)(firebase-admin@12.7.0)
+      '@langchain/core': 0.1.63(openai@4.104.0)
+      '@langchain/openai': 0.0.14
+      '@langchain/textsplitters': 0.0.1
+      '@pinecone-database/pinecone': 2.2.2
+      mammoth: 1.11.0
+      pdf-parse: 1.1.4
+    transitivePeerDependencies:
+      - '@aws-crypto/sha256-js'
+      - '@aws-sdk/client-bedrock-agent-runtime'
+      - '@aws-sdk/client-bedrock-runtime'
+      - '@aws-sdk/client-dynamodb'
+      - '@aws-sdk/client-kendra'
+      - '@aws-sdk/client-lambda'
+      - '@aws-sdk/client-sagemaker-runtime'
+      - '@aws-sdk/client-sfn'
+      - '@aws-sdk/credential-provider-node'
+      - '@clickhouse/client'
+      - '@cloudflare/ai'
+      - '@datastax/astra-db-ts'
+      - '@elastic/elasticsearch'
+      - '@getmetal/metal-sdk'
+      - '@getzep/zep-js'
+      - '@gomomento/sdk'
+      - '@gomomento/sdk-core'
+      - '@google-ai/generativelanguage'
+      - '@gradientai/nodejs-sdk'
+      - '@huggingface/inference'
+      - '@mozilla/readability'
+      - '@opensearch-project/opensearch'
+      - '@planetscale/database'
+      - '@qdrant/js-client-rest'
+      - '@raycast/api'
+      - '@rockset/client'
+      - '@smithy/eventstream-codec'
+      - '@smithy/protocol-http'
+      - '@smithy/signature-v4'
+      - '@smithy/util-utf8'
+      - '@supabase/postgrest-js'
+      - '@supabase/supabase-js'
+      - '@tensorflow-models/universal-sentence-encoder'
+      - '@tensorflow/tfjs-converter'
+      - '@tensorflow/tfjs-core'
+      - '@upstash/redis'
+      - '@vercel/kv'
+      - '@vercel/postgres'
+      - '@writerai/writer-sdk'
+      - '@xata.io/client'
+      - '@xenova/transformers'
+      - '@zilliz/milvus2-sdk-node'
+      - cassandra-driver
+      - chromadb
+      - closevector-common
+      - closevector-node
+      - closevector-web
+      - cohere-ai
+      - convex
+      - discord.js
+      - encoding
+      - faiss-node
+      - firebase-admin
+      - google-auth-library
+      - googleapis
+      - hnswlib-node
+      - html-to-text
+      - ioredis
+      - jsdom
+      - llmonitor
+      - lodash
+      - lunary
+      - mongodb
+      - mysql2
+      - neo4j-driver
+      - node-llama-cpp
+      - openai
+      - pg
+      - pg-copy-streams
+      - pickleparser
+      - portkey-ai
+      - redis
+      - replicate
+      - supports-color
+      - typeorm
+      - typesense
+      - usearch
+      - vectordb
+      - voy-search
+      - weaviate-ts-client
+      - web-auth-library
+      - ws
     dev: false

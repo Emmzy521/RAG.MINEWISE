@@ -6,9 +6,24 @@ import { getAuth } from 'firebase-admin/auth';
 import * as logger from 'firebase-functions/logger';
 
 // Set Google Cloud Project ID for Vertex AI (from Firebase project)
-const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID || process.env.GCP_PROJECT_ID || process.env.GCLOUD_PROJECT || 'minewise-ai-4a4da';
-process.env.GOOGLE_CLOUD_PROJECT = PROJECT_ID;
-process.env.GOOGLE_CLOUD_PROJECT_ID = PROJECT_ID;
+// Firebase Functions v2 automatically provides GCLOUD_PROJECT
+function getProjectId(): string {
+  // Try multiple sources in order of preference
+  const projectId = 
+    process.env.GOOGLE_CLOUD_PROJECT_ID || 
+    process.env.GCP_PROJECT_ID || 
+    process.env.GCLOUD_PROJECT ||
+    process.env.GOOGLE_CLOUD_PROJECT ||
+    'minewise-ai-4a4da'; // Fallback (should not be needed in production)
+  
+  // Set both environment variables for consistency
+  process.env.GOOGLE_CLOUD_PROJECT = projectId;
+  process.env.GOOGLE_CLOUD_PROJECT_ID = projectId;
+  
+  return projectId;
+}
+
+const PROJECT_ID = getProjectId();
 
 // Lazy-loaded router to avoid heavy imports during deployment analysis
 let appRouter: any = null;
@@ -58,6 +73,10 @@ export const api = onRequest(
     region: 'us-central1',
   },
   async (request, response): Promise<void> => {
+    // Ensure project ID is set before processing
+    const currentProjectId = getProjectId();
+    logger.info(`🔧 Using Google Cloud Project: ${currentProjectId}`);
+    
     // Lazy initialization - only happens when function is actually invoked
     const { db, auth } = ensureInitialized();
     
@@ -193,11 +212,30 @@ export const api = onRequest(
       return;
     } catch (error: any) {
       // 4. Error Handling (Explicitly catch and respond)
-      logger.error('API Error during execution:', error);
+      logger.error('❌ API Error during execution:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+        procedure: request.body?.procedure,
+        method: request.method,
+        path: request.path,
+      });
       
       // Handle tRPC errors or internal execution errors
       const statusCode = error.code === 'UNAUTHORIZED' ? 401 : 500;
-      response.status(statusCode).json({ error: error.message || 'Internal API Error' });
+      
+      // Provide more detailed error message in development, generic in production
+      const errorMessage = process.env.NODE_ENV === 'development' 
+        ? error.message || 'Internal API Error'
+        : error.message || 'Internal API Error';
+      
+      response.status(statusCode).json({ 
+        error: errorMessage,
+        ...(process.env.NODE_ENV === 'development' && { 
+          stack: error.stack,
+          details: error.toString() 
+        })
+      });
       return;
     }
   }

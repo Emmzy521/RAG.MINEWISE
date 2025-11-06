@@ -29,13 +29,21 @@ export async function generateGroundedResponse(
 ): Promise<string> {
     try {
         // --- 1. Initialization and Configuration ---
-        const project = process.env.GOOGLE_CLOUD_PROJECT_ID || process.env.GCP_PROJECT_ID;
+        // Try multiple sources for project ID (Firebase Functions provides GCLOUD_PROJECT)
+        const project = 
+            process.env.GOOGLE_CLOUD_PROJECT_ID || 
+            process.env.GCP_PROJECT_ID || 
+            process.env.GCLOUD_PROJECT ||
+            process.env.GOOGLE_CLOUD_PROJECT;
         const location = 'us-central1';
         const model = 'gemini-2.5-pro';
         
         if (!project) {
-            throw new Error('GOOGLE_CLOUD_PROJECT_ID or GCP_PROJECT_ID environment variable must be set');
+            logger.error('❌ Project ID not found in environment variables. Available env vars:', Object.keys(process.env).filter(k => k.includes('PROJECT')));
+            throw new Error('GOOGLE_CLOUD_PROJECT_ID, GCP_PROJECT_ID, or GCLOUD_PROJECT environment variable must be set');
         }
+        
+        logger.log(`🔧 Using Google Cloud Project: ${project} for Gemini API`);
 
         // Use Vertex AI Generative AI REST API endpoint for Gemini
         // Note: Gemini models use generateContent, not predict
