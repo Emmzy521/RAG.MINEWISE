@@ -407,10 +407,60 @@ app.use((req: Request, res: Response) => {
   });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 Local API server running on http://localhost:${PORT}`);
   console.log(`📡 API endpoint: http://localhost:${PORT}/api`);
   console.log(`❤️  Health check: http://localhost:${PORT}/health`);
   console.log(`🌐 CORS origin: ${CORS_ORIGIN}`);
 });
+
+// Graceful shutdown handling - allows active requests to complete before restart
+let isShuttingDown = false;
+const activeRequests = new Set<Response>();
+
+// Track active requests
+app.use((req: Request, res: Response, next) => {
+  if (isShuttingDown) {
+    res.status(503).json({ error: 'Server is shutting down' });
+    return;
+  }
+  activeRequests.add(res);
+  res.on('finish', () => {
+    activeRequests.delete(res);
+  });
+  next();
+});
+
+// Graceful shutdown function
+const gracefulShutdown = (signal: string) => {
+  console.log(`\n🛑 Received ${signal}, starting graceful shutdown...`);
+  isShuttingDown = true;
+  
+  // Stop accepting new requests
+  server.close(() => {
+    console.log('✅ HTTP server closed');
+  });
+  
+  // Wait for active requests to complete (max 30 seconds)
+  const shutdownTimeout = setTimeout(() => {
+    console.log('⚠️ Forcing shutdown after timeout');
+    process.exit(0);
+  }, 30000);
+  
+  // Check if all requests are done
+  const checkActiveRequests = setInterval(() => {
+    if (activeRequests.size === 0) {
+      clearInterval(checkActiveRequests);
+      clearTimeout(shutdownTimeout);
+      console.log('✅ All requests completed, shutting down');
+      process.exit(0);
+    } else {
+      console.log(`⏳ Waiting for ${activeRequests.size} active request(s) to complete...`);
+    }
+  }, 1000);
+};
+
+// Handle shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
