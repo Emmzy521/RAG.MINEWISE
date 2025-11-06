@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
 import { api } from '../lib/api';
-import { Search, FileText, Loader2 } from 'lucide-react';
+import { FileText } from 'lucide-react';
+import QueryInput from '../components/QueryInput';
 
 interface QueryResponse {
   answer: string;
@@ -19,15 +19,17 @@ interface QueryResponse {
 }
 
 export default function Query() {
-  const [query, setQuery] = useState('');
+  const location = useLocation();
   const [response, setResponse] = useState<QueryResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
-
+  /**
+   * Handles the query submission from the QueryInput component.
+   * This function will be passed as a prop to QueryInput.
+   */
+  const handleQuerySubmit = async (query: string) => {
+    console.log("Submitting query:", query);
     setLoading(true);
     setError('');
     setResponse(null);
@@ -41,6 +43,18 @@ export default function Query() {
       setLoading(false);
     }
   };
+  
+  // Check if we have an initial query from navigation state
+  useEffect(() => {
+    const state = location.state as { initialQuery?: string } | null;
+    if (state?.initialQuery) {
+      // Auto-submit the query when navigating from Home page
+      handleQuerySubmit(state.initialQuery);
+      // Clear the state to prevent re-submission on re-render
+      window.history.replaceState({}, '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -59,29 +73,11 @@ export default function Query() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="flex space-x-2">
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="e.g., What are the environmental compliance requirements for mining operations?"
-                className="flex-1 bg-background/50 border-cyan-400/20 text-white placeholder:text-gray-500 focus-visible:border-cyan-400/50 focus-visible:ring-cyan-400/50"
-              />
-              <Button type="submit" disabled={loading || !query.trim()}>
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Searching...
-                  </>
-                ) : (
-                  <>
-                    <Search className="w-4 h-4 mr-2" />
-                    Search
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
+          <QueryInput 
+            onQuerySubmit={handleQuerySubmit}
+            isLoading={loading}
+            placeholder="e.g., What are the environmental compliance requirements for mining operations?"
+          />
         </CardContent>
       </Card>
 

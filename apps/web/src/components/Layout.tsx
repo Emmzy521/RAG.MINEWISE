@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { Button } from './ui/button';
-import { FileText, Search, LogOut, Menu } from 'lucide-react';
+import { LogOut, Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
 
 interface LayoutProps {
@@ -11,7 +11,6 @@ interface LayoutProps {
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const location = useLocation();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const handleSignOut = async () => {
@@ -25,11 +24,6 @@ export default function Layout({ children }: LayoutProps) {
   const closeDrawer = () => {
     setIsDrawerOpen(false);
   };
-
-  const navItems = [
-    { path: '/', label: 'Home', icon: FileText },
-    { path: '/query', label: 'Query', icon: Search },
-  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -50,30 +44,10 @@ export default function Layout({ children }: LayoutProps) {
             </div>
             
             {/* Centered Navigation */}
-            <div className="flex items-center justify-center space-x-8 flex-1">
+            <div className="flex items-center justify-center flex-1">
               <Link to="/" className="text-2xl font-bold gradient-text">
                 Minewise AI
               </Link>
-              <div className="flex space-x-2">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.path;
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-all ${
-                        isActive
-                          ? 'bg-gradient-cyan text-white shadow-lg shadow-cyan-500/50'
-                          : 'text-gray-300 hover:bg-cyan-400/10 hover:text-cyan-400 border border-transparent hover:border-cyan-400/30'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
             </div>
             
             {/* Right side - Sign Out */}

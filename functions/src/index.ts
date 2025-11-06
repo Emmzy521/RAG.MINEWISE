@@ -88,7 +88,34 @@ export const api = onRequest(
           return;
         }
 
-        const { procedure, input } = body;
+        // Extract and validate procedure - ensure it's a string
+        let procedure: string;
+        if (typeof body.procedure === 'string') {
+          procedure = body.procedure.trim(); // Trim whitespace
+        } else if (typeof body.procedure === 'object' && body.procedure !== null) {
+          // If procedure is an object, try to stringify it for debugging
+          logger.error('❌ Procedure is an object instead of string:', JSON.stringify(body.procedure));
+          response.status(400).json({ 
+            error: 'Procedure must be a string, not an object.',
+            received: JSON.stringify(body.procedure)
+          });
+          return;
+        } else {
+          logger.error('❌ Procedure is not a string:', typeof body.procedure, body.procedure);
+          response.status(400).json({ 
+            error: `Procedure must be a string, got ${typeof body.procedure}`,
+            received: body.procedure 
+          });
+          return;
+        }
+        
+        // Validate procedure is not empty
+        if (!procedure || procedure.length === 0) {
+          response.status(400).json({ error: 'Procedure cannot be empty.' });
+          return;
+        }
+        
+        const input = body.input;
 
         // 1. Authentication and Context Setup
         const authHeader = request.headers.authorization;
@@ -105,12 +132,34 @@ export const api = onRequest(
           }
         }
 
-        const caller = router.createCaller({ userId });
+        // Ensure router is properly initialized
+        if (!router || typeof router.createCaller !== 'function') {
+          logger.error('❌ Router is not properly initialized!');
+          logger.error('Router:', router);
+          logger.error('typeof router:', typeof router);
+          response.status(500).json({ error: 'Router not initialized' });
+          return;
+        }
 
-        // 2. Execute the tRPC Procedure
-        let result;
-        
-        switch (procedure) {
+        const caller = router.createCaller({ userId });
+        
+        // Final validation - ensure procedure is definitely a string
+        if (typeof procedure !== 'string') {
+          logger.error('❌ CRITICAL: Procedure is not a string at execution time!', typeof procedure, procedure);
+          response.status(400).json({ 
+            error: `Internal error: Procedure type mismatch - expected string, got ${typeof procedure}` 
+          });
+          return;
+        }
+
+        // 2. Execute the tRPC Procedure
+        let result;
+        logger.info('🔍 Calling procedure:', procedure, 'Type:', typeof procedure);
+        
+        // Ensure procedure is a string before using in switch
+        const procedureName = String(procedure); // Force string conversion
+        
+        switch (procedureName) {
           case 'uploadDocument':
             result = await caller.uploadDocument(input);
             break;

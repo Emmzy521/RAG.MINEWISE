@@ -3,14 +3,23 @@ import { Link } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Search, Plus, X } from 'lucide-react';
+import { db, auth } from '../lib/firebase';
+import { collection, query, where, orderBy, limit, onSnapshot, Timestamp } from 'firebase/firestore';
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface RecentChat {
+  id: string;
+  query: string;
+  timestamp: Date | Timestamp;
+}
+
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [recentChats, setRecentChats] = useState<RecentChat[]>([]);
 
   // Close drawer on Escape key
   useEffect(() => {
@@ -34,6 +43,44 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       document.body.style.overflow = 'unset';
     };
   }, [isOpen]);
+
+  // Load recent chats from Firestore
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const chatsRef = collection(db, 'chats');
+    const q = query(
+      chatsRef,
+      where('userId', '==', user.uid),
+      orderBy('timestamp', 'desc'),
+      limit(20)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const chats: RecentChat[] = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            query: data.query || '',
+            timestamp: data.timestamp || new Date(),
+          };
+        });
+        setRecentChats(chats);
+      },
+      (error) => {
+        console.error('Error loading chats:', error);
+        // If index is missing, Firestore will provide a link in the error
+        if (error.code === 'failed-precondition') {
+          console.warn('Firestore index required. Check the error message for the index creation link.');
+        }
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
 
   return (
     <>
@@ -73,7 +120,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {/* New Chat Button */}
-            <Link to="/query" onClick={onClose}>
+            <Link to="/" onClick={onClose}>
               <Button className="w-full bg-gradient-cyan text-white hover:opacity-90 hover:shadow-lg hover:shadow-cyan-500/50">
                 <Plus className="w-4 h-4 mr-2" />
                 New Chat
@@ -97,13 +144,27 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-2">
                 Recent Chats
               </h3>
-              <div className="space-y-1">
-                {/* Placeholder for chat history - can be populated later */}
-                <div className="text-sm text-gray-400 px-2 py-1">
-                  No recent chats
+              {recentChats.length > 0 && (
+                <div className="space-y-1">
+                  {recentChats.map((chat) => (
+                    <Link
+                      key={chat.id}
+                      to="/"
+                      onClick={onClose}
+                      className="block px-2 py-2 rounded-md text-sm text-gray-300 hover:bg-cyan-400/10 hover:text-cyan-400 transition-all"
+                    >
+                      <div className="truncate">{chat.query}</div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {chat.timestamp instanceof Timestamp
+                          ? chat.timestamp.toDate().toLocaleDateString()
+                          : new Date(chat.timestamp).toLocaleDateString()}
+                      </div>
+                    </Link>
+                  ))}
                 </div>
-              </div>
+              )}
             </div>
+
           </div>
         </div>
       </aside>

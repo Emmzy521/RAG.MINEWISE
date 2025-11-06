@@ -117,7 +117,30 @@ app.post('/api', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid request format or missing procedure.' });
     }
 
-    const { procedure } = body;
+    // Extract and validate procedure - ensure it's a string
+    let procedure: string;
+    if (typeof body.procedure === 'string') {
+      procedure = body.procedure.trim(); // Trim whitespace
+    } else if (typeof body.procedure === 'object' && body.procedure !== null) {
+      // If procedure is an object, try to stringify it for debugging
+      console.error('❌ Procedure is an object instead of string:', JSON.stringify(body.procedure));
+      return res.status(400).json({ 
+        error: 'Procedure must be a string, not an object.',
+        received: JSON.stringify(body.procedure)
+      });
+    } else {
+      console.error('❌ Procedure is not a string:', typeof body.procedure, body.procedure);
+      return res.status(400).json({ 
+        error: `Procedure must be a string, got ${typeof body.procedure}`,
+        received: body.procedure 
+      });
+    }
+    
+    // Validate procedure is not empty
+    if (!procedure || procedure.length === 0) {
+      return res.status(400).json({ error: 'Procedure cannot be empty.' });
+    }
+    
     let input = body.input;
 
     // Authentication and Context Setup
@@ -141,16 +164,43 @@ app.post('/api', async (req: Request, res: Response) => {
       console.log('⚠️ Using default dev userId for local development');
     }
 
+    // Ensure router is properly initialized
+    if (!appRouter || typeof appRouter.createCaller !== 'function') {
+      console.error('❌ appRouter is not properly initialized!');
+      console.error('appRouter:', appRouter);
+      console.error('typeof appRouter:', typeof appRouter);
+      return res.status(500).json({ error: 'Router not initialized' });
+    }
+
     const caller = appRouter.createCaller({ userId });
     console.log('🔧 Created tRPC caller for userId:', userId || 'anonymous');
+    console.log('🔧 Procedure type:', typeof procedure, 'Procedure value:', procedure);
+    console.log('🔧 Procedure is string?:', typeof procedure === 'string');
     
     // Verify router structure
     console.log('🔧 Router type:', typeof appRouter);
     console.log('🔧 Router keys:', Object.keys(appRouter));
+    
+    // Ensure procedure is a string before using it
+    if (typeof procedure !== 'string') {
+      console.error('❌ Procedure is not a string after validation!', typeof procedure, procedure);
+      return res.status(400).json({ 
+        error: `Invalid procedure type: expected string, got ${typeof procedure}`,
+        received: procedure 
+      });
+    }
+
+    // Final validation - ensure procedure is definitely a string
+    if (typeof procedure !== 'string') {
+      console.error('❌ CRITICAL: Procedure is not a string at execution time!', typeof procedure, procedure);
+      return res.status(400).json({ 
+        error: `Internal error: Procedure type mismatch - expected string, got ${typeof procedure}` 
+      });
+    }
 
     // Execute the tRPC Procedure
     let result;
-    console.log('🔍 Calling procedure:', procedure, 'with input:', JSON.stringify(input, null, 2));
+    console.log('🔍 Calling procedure:', procedure, 'Type:', typeof procedure, 'with input:', JSON.stringify(input, null, 2));
 
     // Validate input exists
     if (input === undefined) {
@@ -160,12 +210,15 @@ app.post('/api', async (req: Request, res: Response) => {
     try {
       // tRPC createCaller returns a proxy, so we call methods directly
       // The proxy will handle method resolution and throw appropriate errors if not found
-      switch (procedure) {
+      // Ensure procedure is a string before using in switch
+      const procedureName = String(procedure); // Force string conversion
+      switch (procedureName) {
         case 'uploadDocument':
           result = await caller.uploadDocument(input);
           break;
         case 'query':
           console.log('📝 Calling query procedure with input:', JSON.stringify(input, null, 2));
+          console.log('📝 Procedure name:', procedureName, 'Type:', typeof procedureName);
           
           if (!input || typeof input !== 'object') {
             throw new Error('Query input must be an object with query and optional topK');
@@ -178,6 +231,13 @@ app.post('/api', async (req: Request, res: Response) => {
           
           // Directly call the method - tRPC proxy will handle it
           console.log('📝 About to call caller.query()...');
+          console.log('📝 Caller type:', typeof caller);
+          console.log('📝 caller.query type:', typeof caller.query);
+          
+          if (typeof caller.query !== 'function') {
+            throw new Error(`caller.query is not a function. Type: ${typeof caller.query}`);
+          }
+          
           result = await caller.query(input);
           console.log('📝 Query procedure returned successfully');
           break;
