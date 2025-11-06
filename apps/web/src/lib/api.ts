@@ -37,19 +37,38 @@ export async function apiCall<T>(procedure: string, input?: any): Promise<T> {
 
     if (!response.ok) {
       let errorMessage = `API error: ${response.statusText}`;
-      try {
-        const error = await response.json();
-        errorMessage = error.error || error.message || errorMessage;
-        console.error('❌ API Error:', error);
-      } catch (e) {
-        console.error('❌ Failed to parse error response:', e);
-        // If response is not JSON, use status text
-        if (response.status === 0 || response.status === 503) {
+      
+      // Check if response has content before trying to parse
+      const contentType = response.headers.get('content-type');
+      const hasJsonContent = contentType && contentType.includes('application/json');
+      
+      // Get response text first to check if it's empty
+      const responseText = await response.text();
+      
+      if (hasJsonContent && responseText.trim().length > 0) {
+        try {
+          const error = JSON.parse(responseText);
+          errorMessage = error.error || error.message || error.details || errorMessage;
+          console.error('❌ API Error:', error);
+        } catch (e) {
+          console.error('❌ Failed to parse error response:', e);
+          // Use the raw text if JSON parsing fails
+          if (responseText.trim().length > 0) {
+            errorMessage = responseText;
+          }
+        }
+      } else {
+        // Handle non-JSON or empty responses
+        if (responseText.trim().length > 0) {
+          errorMessage = responseText;
+        } else if (response.status === 0 || response.status === 503) {
           errorMessage = 'Cannot connect to server. Make sure the backend server is running on http://localhost:5001';
         } else if (response.status === 401) {
           errorMessage = 'Unauthorized. Please log in again.';
         } else if (response.status === 404) {
           errorMessage = `API endpoint not found (${response.status}). Check the server configuration. Endpoint: ${endpoint}`;
+        } else if (response.status === 500) {
+          errorMessage = 'Internal server error. Check server logs for details.';
         }
       }
       throw new Error(errorMessage);

@@ -54,19 +54,24 @@ export default function Login() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <Card className="w-full max-w-md">
+    <div className="relative flex items-center justify-center min-h-screen bg-background">
+      {/* Radial gradient background glow */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="w-[600px] h-[600px] radial-glow opacity-30"></div>
+      </div>
+      
+      <Card className="relative z-10 w-full max-w-md bg-card/50 backdrop-blur-sm border-cyan-400/20">
         <CardHeader>
-          <CardTitle className="text-2xl">Minewise AI</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl gradient-text">Minewise AI</CardTitle>
+          <CardDescription className="text-gray-400">
             {isSignUp ? 'Create an account' : 'Sign in to your account'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error && <div className="text-sm text-destructive bg-destructive/10 p-3 rounded">{error}</div>}
+            {error && <div className="text-sm text-destructive bg-destructive/10 p-3 rounded border border-destructive/30">{error}</div>}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-1">
+              <label htmlFor="email" className="block text-sm font-medium mb-1 text-white">
                 Email
               </label>
               <Input
@@ -76,10 +81,11 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="you@example.com"
+                className="bg-background/50 border-cyan-400/20 text-white placeholder:text-gray-500 focus-visible:border-cyan-400/50 focus-visible:ring-cyan-400/50"
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-1">
+              <label htmlFor="password" className="block text-sm font-medium mb-1 text-white">
                 Password
               </label>
               <Input
@@ -89,6 +95,7 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="••••••••"
+                className="bg-background/50 border-cyan-400/20 text-white placeholder:text-gray-500 focus-visible:border-cyan-400/50 focus-visible:ring-cyan-400/50"
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
@@ -97,7 +104,7 @@ export default function Login() {
             <Button
               type="button"
               variant="ghost"
-              className="w-full"
+              className="w-full text-gray-300 hover:text-cyan-400 hover:bg-cyan-400/10"
               onClick={() => setIsSignUp(!isSignUp)}
             >
               {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}

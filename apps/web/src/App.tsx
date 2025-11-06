@@ -39,11 +39,11 @@ function App() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center p-8 bg-white rounded-lg shadow-md max-w-md">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
-          <p className="text-gray-700 mb-4">{error}</p>
-          <p className="text-sm text-gray-500">
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-center p-8 bg-card/50 backdrop-blur-sm border border-cyan-400/20 rounded-lg shadow-lg max-w-md">
+          <h1 className="text-2xl font-bold text-red-400 mb-4">Error</h1>
+          <p className="text-gray-300 mb-4">{error}</p>
+          <p className="text-sm text-gray-400">
             Please check your browser console for more details.
           </p>
         </div>
@@ -53,10 +53,10 @@ function App() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center">
-          <div className="text-lg mb-2">Loading...</div>
-          <div className="text-sm text-gray-500">Initializing Minewise AI</div>
+          <div className="text-lg mb-2 text-white">Loading...</div>
+          <div className="text-sm text-gray-400">Initializing Minewise AI</div>
         </div>
       </div>
     );

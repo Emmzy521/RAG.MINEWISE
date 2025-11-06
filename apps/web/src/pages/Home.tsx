@@ -1,80 +1,59 @@
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Search, Upload, FileText } from 'lucide-react';
+import { Search, Sparkles } from 'lucide-react';
 
 export default function Home() {
   return (
-    <div className="space-y-8">
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold">Minewise AI</h1>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Your intelligent assistant for finding accurate, up-to-date legal information related to
-          mining regulations and compliance in Zambia.
-        </p>
+    <div className="relative min-h-[calc(100vh-200px)] flex flex-col items-center justify-center">
+      {/* Radial gradient background glow */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="w-[800px] h-[800px] radial-glow opacity-50"></div>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <Upload className="w-8 h-8 text-primary mb-2" />
-            <CardTitle>Upload Documents</CardTitle>
-            <CardDescription>
-              Upload mining-related legal PDFs or text documents for indexing
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link to="/upload">
-              <Button className="w-full">Upload Documents</Button>
-            </Link>
-          </CardContent>
-        </Card>
+      {/* Main centered content */}
+      <div className="relative z-10 w-full max-w-4xl mx-auto px-4 space-y-12">
+        {/* Central Prompt Area with Glow */}
+        <div className="relative">
+          <div className="absolute inset-0 radial-glow opacity-30"></div>
+          <div className="relative bg-card/50 backdrop-blur-sm rounded-2xl p-8 glow-border border-cyan-400/30">
+            <div className="flex flex-col md:flex-row gap-4 items-center">
+              <div className="flex-1 w-full">
+                <div className="flex items-center gap-3 text-cyan-400 mb-2">
+                  <Sparkles className="w-5 h-5" />
+                  <span className="text-sm font-medium">Ask anything about mining regulations</span>
+                </div>
+                <Link to="/query" className="block">
+                  <div className="w-full h-16 bg-background/50 border border-cyan-400/20 rounded-lg flex items-center px-4 text-gray-400 hover:glow-border-focus hover:border-cyan-400/50 transition-all cursor-pointer">
+                    <span>e.g., What are the environmental compliance requirements for mining operations?</span>
+                  </div>
+                </Link>
+              </div>
+              <Link to="/query" className="w-full md:w-auto">
+                <Button size="lg" className="w-full md:w-auto h-16 px-8 text-lg font-semibold">
+                  <Search className="w-5 h-5 mr-2" />
+                  Start Querying
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
 
-        <Card>
+        {/* Legal Disclaimer */}
+        <Card className="bg-card/30 backdrop-blur-sm border-cyan-400/10">
           <CardHeader>
-            <Search className="w-8 h-8 text-primary mb-2" />
-            <CardTitle>Ask Questions</CardTitle>
-            <CardDescription>
-              Query your documents using natural language and get AI-powered answers with
-              citations
-            </CardDescription>
+            <CardTitle className="text-white">Legal Disclaimer</CardTitle>
           </CardHeader>
           <CardContent>
-            <Link to="/query">
-              <Button className="w-full">Start Querying</Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <FileText className="w-8 h-8 text-primary mb-2" />
-            <CardTitle>View Analytics</CardTitle>
-            <CardDescription>
-              Monitor your document statistics, query logs, and system usage
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link to="/dashboard">
-              <Button className="w-full">View Dashboard</Button>
-            </Link>
+            <p className="text-sm text-gray-400">
+              Minewise AI provides explanations based on uploaded documents and is not a substitute
+              for professional legal advice. All responses are informational and should not be
+              construed as formal legal advice. Please consult with qualified legal professionals for
+              your specific situation.
+            </p>
           </CardContent>
         </Card>
       </div>
-
-      <Card className="bg-blue-50 border-blue-200">
-        <CardHeader>
-          <CardTitle>Legal Disclaimer</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Minewise AI provides explanations based on uploaded documents and is not a substitute
-            for professional legal advice. All responses are informational and should not be
-            construed as formal legal advice. Please consult with qualified legal professionals for
-            your specific situation.
-          </p>
-        </CardContent>
-      </Card>
     </div>
   );
 }

@@ -100,22 +100,22 @@ export default function Upload() {
   };
 
   if (loading) {
-    return <div>Loading documents...</div>;
+    return <div className="text-white">Loading documents...</div>;
   }
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Upload Documents</h1>
-        <p className="text-muted-foreground mt-2">
+        <h1 className="text-3xl font-bold text-white">Upload Documents</h1>
+        <p className="text-gray-300 mt-2">
           Upload mining-related legal documents for indexing and searching
         </p>
       </div>
 
-      <Card>
+      <Card className="bg-card/50 backdrop-blur-sm border-cyan-400/20">
         <CardHeader>
-          <CardTitle>Upload New Documents</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-white">Upload New Documents</CardTitle>
+          <CardDescription className="text-gray-400">
             Supported formats: PDF, TXT, DOCX. Documents will be processed and indexed automatically.
           </CardDescription>
         </CardHeader>
@@ -126,22 +126,23 @@ export default function Upload() {
               onChange={handleFileSelect}
               multiple
               accept=".pdf,.txt,.docx,.doc"
+              className="bg-background/50 border-cyan-400/20 text-white file:text-white file:bg-cyan-400/20 file:border-cyan-400/30 file:rounded file:px-4 file:py-2 file:mr-4 file:cursor-pointer hover:file:bg-cyan-400/30"
             />
           </div>
 
           {files.length > 0 && (
             <div className="space-y-2">
-              <p className="text-sm font-medium">Selected files:</p>
+              <p className="text-sm font-medium text-white">Selected files:</p>
               {files.map((file, index) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                <div key={index} className="flex items-center justify-between p-2 bg-background/30 border border-cyan-400/20 rounded">
                   <div className="flex items-center space-x-2">
-                    <FileText className="w-4 h-4" />
-                    <span className="text-sm">{file.name}</span>
-                    <span className="text-xs text-muted-foreground">
+                    <FileText className="w-4 h-4 text-cyan-400" />
+                    <span className="text-sm text-white">{file.name}</span>
+                    <span className="text-xs text-gray-400">
                       ({(file.size / 1024).toFixed(2)} KB)
                     </span>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => removeFile(index)}>
+                  <Button variant="ghost" size="sm" onClick={() => removeFile(index)} className="text-gray-400 hover:text-white hover:bg-cyan-400/10">
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -156,27 +157,27 @@ export default function Upload() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="bg-card/50 backdrop-blur-sm border-cyan-400/20">
         <CardHeader>
-          <CardTitle>Your Documents</CardTitle>
-          <CardDescription>Manage your uploaded documents</CardDescription>
+          <CardTitle className="text-white">Your Documents</CardTitle>
+          <CardDescription className="text-gray-400">Manage your uploaded documents</CardDescription>
         </CardHeader>
         <CardContent>
           {documents.length === 0 ? (
-            <p className="text-muted-foreground">No documents uploaded yet.</p>
+            <p className="text-gray-400">No documents uploaded yet.</p>
           ) : (
             <div className="space-y-2">
               {documents.map((doc) => (
                 <div
                   key={doc.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
+                  className="flex items-center justify-between p-4 border border-cyan-400/20 rounded-lg bg-background/30"
                 >
                   <div className="flex-1">
                     <div className="flex items-center space-x-2">
-                      <FileText className="w-5 h-5 text-primary" />
+                      <FileText className="w-5 h-5 text-cyan-400" />
                       <div>
-                        <p className="font-medium">{doc.filename}</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="font-medium text-white">{doc.filename}</p>
+                        <p className="text-sm text-gray-400">
                           {doc.chunkCount || 0} chunks •{' '}
                           {new Date(doc.uploadedAt?.seconds * 1000).toLocaleDateString()}
                         </p>

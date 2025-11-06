@@ -6,7 +6,16 @@ import cors from 'cors';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
-import { appRouter, setFirestore } from './router.js';
+import { appRouter, setFirestore } from './router';
+
+// Verify appRouter is correctly imported (not the module object)
+if (!appRouter || typeof appRouter.createCaller !== 'function') {
+  console.error('❌ CRITICAL: appRouter is not correctly imported!');
+  console.error('appRouter type:', typeof appRouter);
+  console.error('appRouter value:', appRouter);
+  console.error('appRouter keys:', Object.keys(appRouter || {}));
+  throw new Error('appRouter import failed - router not properly exported');
+}
 
 // Set Google Cloud Project ID for Vertex AI
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID || process.env.GCP_PROJECT_ID || 'minewise-ai-4a4da';
@@ -42,11 +51,22 @@ console.log('✅ Router initialized with Firestore');
 // Verify router structure at startup
 console.log('🔍 Router structure check:');
 console.log('  - Router type:', typeof appRouter);
-console.log('  - Router keys:', Object.keys(appRouter));
-console.log('  - Router has query?:', 'query' in appRouter);
+console.log('  - Router is object?:', typeof appRouter === 'object');
+console.log('  - Router has createCaller?:', typeof appRouter?.createCaller === 'function');
+console.log('  - Router keys:', Object.keys(appRouter || {}));
+console.log('  - Router has query?:', 'query' in (appRouter || {}));
+
+// Verify appRouter is the router, not a module object
+if (!appRouter || typeof appRouter.createCaller !== 'function') {
+  console.error('❌ ERROR: appRouter is not a valid tRPC router!');
+  console.error('  - appRouter:', appRouter);
+  console.error('  - typeof appRouter:', typeof appRouter);
+  console.error('  - appRouter.createCaller:', typeof appRouter?.createCaller);
+  throw new Error('appRouter import is incorrect - expected tRPC router but got: ' + typeof appRouter);
+}
+
 const testCaller = appRouter.createCaller({ userId: 'test' });
-console.log('  - Test caller keys:', Object.keys(testCaller));
-console.log('  - Test caller has query?:', 'query' in testCaller);
+console.log('  - Test caller created successfully');
 console.log('  - Test caller.query type:', typeof testCaller.query);
 
 const PORT = process.env.PORT || 5001;
@@ -123,10 +143,6 @@ app.post('/api', async (req: Request, res: Response) => {
 
     const caller = appRouter.createCaller({ userId });
     console.log('🔧 Created tRPC caller for userId:', userId || 'anonymous');
-    console.log('🔧 Available procedures:', Object.keys(caller));
-    console.log('🔧 caller.query exists?:', 'query' in caller);
-    console.log('🔧 typeof caller.query:', typeof caller.query);
-    console.log('🔧 caller keys:', JSON.stringify(Object.keys(caller)));
     
     // Verify router structure
     console.log('🔧 Router type:', typeof appRouter);
@@ -142,15 +158,14 @@ app.post('/api', async (req: Request, res: Response) => {
     }
 
     try {
+      // tRPC createCaller returns a proxy, so we call methods directly
+      // The proxy will handle method resolution and throw appropriate errors if not found
       switch (procedure) {
         case 'uploadDocument':
           result = await caller.uploadDocument(input);
           break;
         case 'query':
           console.log('📝 Calling query procedure with input:', JSON.stringify(input, null, 2));
-          console.log('📝 Input type:', typeof input);
-          console.log('📝 Caller object keys:', Object.keys(caller));
-          console.log('📝 caller.query type:', typeof caller.query);
           
           if (!input || typeof input !== 'object') {
             throw new Error('Query input must be an object with query and optional topK');
@@ -161,33 +176,10 @@ app.post('/api', async (req: Request, res: Response) => {
             throw new Error('Query input must include a "query" field');
           }
           
-          // Verify caller.query exists before calling
-          if (!('query' in caller)) {
-            console.error('❌ caller.query does not exist!');
-            console.error('Available caller methods:', Object.keys(caller));
-            console.error('Caller object:', JSON.stringify(Object.keys(caller), null, 2));
-            throw new Error(`Query procedure not available. Available procedures: ${Object.keys(caller).join(', ')}`);
-          }
-          
-          if (typeof caller.query !== 'function') {
-            console.error('❌ caller.query is not a function!');
-            console.error('caller.query type:', typeof caller.query);
-            console.error('caller.query value:', caller.query);
-            throw new Error(`Query procedure is not callable. Type: ${typeof caller.query}`);
-          }
-          
-          // Call the procedure
+          // Directly call the method - tRPC proxy will handle it
           console.log('📝 About to call caller.query()...');
-          try {
-            result = await caller.query(input);
-            console.log('📝 Query procedure returned successfully');
-          } catch (callError: any) {
-            console.error('❌ Error calling caller.query():', callError);
-            console.error('Call error name:', callError.name);
-            console.error('Call error message:', callError.message);
-            console.error('Call error code:', callError.code);
-            throw callError;
-          }
+          result = await caller.query(input);
+          console.log('📝 Query procedure returned successfully');
           break;
         case 'getDocuments':
           result = await caller.getDocuments();
@@ -221,11 +213,12 @@ app.post('/api', async (req: Request, res: Response) => {
       console.error('Error stack:', error.stack);
     }
     
-    // Ensure we always send valid JSON
+    // Ensure we always send valid JSON with proper content-type header
     try {
       const statusCode = error.code === 'UNAUTHORIZED' ? 401 : 500;
       const errorResponse = { 
         error: error.message || 'Internal API Error',
+        message: error.message || 'Internal API Error',
         errorName: error.name || 'Error',
         errorCode: error.code || 'INTERNAL_ERROR',
       };
@@ -235,11 +228,18 @@ app.post('/api', async (req: Request, res: Response) => {
         (errorResponse as any).details = error.stack;
       }
       
+      // Set content-type header explicitly
+      res.setHeader('Content-Type', 'application/json');
       res.status(statusCode).json(errorResponse);
     } catch (jsonError) {
-      // If JSON.stringify fails, send plain text
+      // If JSON.stringify fails, send plain text with JSON wrapper
       console.error('Failed to send JSON error response:', jsonError);
-      res.status(500).json({ error: 'Internal Server Error', message: String(error.message || error) });
+      res.setHeader('Content-Type', 'application/json');
+      res.status(500).json({ 
+        error: 'Internal Server Error', 
+        message: String(error.message || error),
+        errorName: 'JSONError'
+      });
     }
   }
 });
