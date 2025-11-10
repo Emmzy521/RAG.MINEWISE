@@ -69,8 +69,11 @@ const testCaller = appRouter.createCaller({ userId: 'test' });
 console.log('  - Test caller created successfully');
 console.log('  - Test caller.query type:', typeof testCaller.query);
 
-const PORT = process.env.PORT || 5001;
+const PORT = Number(process.env.PORT) || 5001;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
+
+// Track if server has started (for error handling)
+let serverStarted = false;
 
 const app = express();
 
@@ -407,16 +410,43 @@ app.use((req: Request, res: Response) => {
   });
 });
 
-const server = app.listen(PORT, () => {
+// Create server with SO_REUSEADDR to allow faster port reuse on restart
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Local API server running on http://localhost:${PORT}`);
   console.log(`📡 API endpoint: http://localhost:${PORT}/api`);
   console.log(`❤️  Health check: http://localhost:${PORT}/health`);
   console.log(`🌐 CORS origin: ${CORS_ORIGIN}`);
+  serverStarted = true;
+});
+
+// Enable SO_REUSEADDR for faster port reuse
+server.on('listening', () => {
+  const address = server.address();
+  if (address && typeof address === 'object') {
+    // Set SO_REUSEADDR option to allow faster port reuse
+    server.setTimeout(0); // Disable timeout for long-running requests
+  }
+});
+
+// Handle server errors, especially EADDRINUSE
+server.on('error', (error: NodeJS.ErrnoException) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use.`);
+    console.error(`💡 To fix this, run: netstat -ano | findstr :${PORT}`);
+    console.error(`💡 Then kill the process: taskkill /PID <PID> /F`);
+    console.error(`💡 Or wait a few seconds for the port to be released.`);
+    // Don't exit - let tsx watch retry
+    process.exit(1);
+  } else {
+    console.error('❌ Server error:', error);
+    process.exit(1);
+  }
 });
 
 // Graceful shutdown handling - allows active requests to complete before restart
 let isShuttingDown = false;
 const activeRequests = new Set<Response>();
+let requestStartTime = new Map<Response, number>();
 
 // Track active requests
 app.use((req: Request, res: Response, next) => {
@@ -425,8 +455,14 @@ app.use((req: Request, res: Response, next) => {
     return;
   }
   activeRequests.add(res);
+  requestStartTime.set(res, Date.now());
   res.on('finish', () => {
     activeRequests.delete(res);
+    requestStartTime.delete(res);
+  });
+  res.on('close', () => {
+    activeRequests.delete(res);
+    requestStartTime.delete(res);
   });
   next();
 });
@@ -434,33 +470,80 @@ app.use((req: Request, res: Response, next) => {
 // Graceful shutdown function
 const gracefulShutdown = (signal: string) => {
   console.log(`\n🛑 Received ${signal}, starting graceful shutdown...`);
-  isShuttingDown = true;
+  console.log(`📊 Active requests: ${activeRequests.size}`);
   
-  // Stop accepting new requests
-  server.close(() => {
-    console.log('✅ HTTP server closed');
-  });
+  // Log request durations
+  if (activeRequests.size > 0) {
+    console.log('📋 Active request durations:');
+    activeRequests.forEach((res) => {
+      const startTime = requestStartTime.get(res);
+      if (startTime) {
+        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+        console.log(`   - Request running for ${duration}s`);
+      }
+    });
+  }
   
-  // Wait for active requests to complete (max 30 seconds)
-  const shutdownTimeout = setTimeout(() => {
-    console.log('⚠️ Forcing shutdown after timeout');
-    process.exit(0);
-  }, 30000);
-  
-  // Check if all requests are done
-  const checkActiveRequests = setInterval(() => {
-    if (activeRequests.size === 0) {
-      clearInterval(checkActiveRequests);
-      clearTimeout(shutdownTimeout);
-      console.log('✅ All requests completed, shutting down');
+  // If there are active requests, wait for them to complete
+  if (activeRequests.size > 0) {
+    console.log(`⏳ Waiting for ${activeRequests.size} active request(s) to complete before shutdown...`);
+    isShuttingDown = true;
+    
+    // Stop accepting new requests immediately
+    server.close(() => {
+      console.log('✅ HTTP server closed (no longer accepting new requests)');
+      // Force close all connections after a short delay to ensure port is released
+      setTimeout(() => {
+        server.closeAllConnections();
+        console.log('✅ All connections closed, port should be released');
+      }, 1000);
+    });
+    
+    // Wait for active requests to complete (max 90 seconds for long-running queries)
+    const shutdownTimeout = setTimeout(() => {
+      console.log('⚠️ Forcing shutdown after timeout (90s)');
+      server.closeAllConnections();
       process.exit(0);
-    } else {
-      console.log(`⏳ Waiting for ${activeRequests.size} active request(s) to complete...`);
-    }
-  }, 1000);
+    }, 90000);
+    
+    // Check if all requests are done
+    const checkActiveRequests = setInterval(() => {
+      if (activeRequests.size === 0) {
+        clearInterval(checkActiveRequests);
+        clearTimeout(shutdownTimeout);
+        console.log('✅ All requests completed, shutting down');
+        server.closeAllConnections();
+        process.exit(0);
+      } else {
+        const durations = Array.from(activeRequests).map(res => {
+          const startTime = requestStartTime.get(res);
+          return startTime ? ((Date.now() - startTime) / 1000).toFixed(2) : 'unknown';
+        });
+        console.log(`⏳ Still waiting for ${activeRequests.size} active request(s) to complete... (durations: ${durations.join(', ')}s)`);
+      }
+    }, 2000);
+  } else {
+    // No active requests, shutdown immediately
+    console.log('✅ No active requests, shutting down immediately');
+    server.close(() => {
+      server.closeAllConnections();
+      process.exit(0);
+    });
+  }
 };
 
 // Handle shutdown signals
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Ensure server closes properly on uncaught errors
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  gracefulShutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  gracefulShutdown('unhandledRejection');
+});
 

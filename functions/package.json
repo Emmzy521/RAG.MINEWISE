@@ -6,7 +6,7 @@
   "scripts": {
     "build": "esbuild ./src/index.ts --bundle --platform=node --format=cjs --outfile=lib/index.js --external:firebase-functions --external:firebase-functions/* --external:firebase-admin --external:firebase-admin/* --target=node20",
     "build:dev": "tsc",
-    "dev": "tsx --watch --tsconfig tsconfig.json src/server-dev.ts",
+    "dev": "tsx watch --tsconfig tsconfig.json src/server-dev.ts",
     "server": "node dist/server-dev.js",
     "server:prod": "node dist/server.js",
     "clean": "rm -rf dist lib",

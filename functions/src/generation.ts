@@ -10,6 +10,119 @@ interface RetrievedChunk {
     similarity: number;
 }
 
+/**
+ * Formats a response string to be user-friendly and publication-ready.
+ * - Ensures friendly introduction
+ * - Adds emojis to section headers
+ * - Removes technical references
+ * - Adds clean sources footer
+ */
+function formatUserFriendlyResponse(
+    response: string,
+    chunks: RetrievedChunk[]
+): string {
+    let formatted = response.trim();
+
+    // Remove any technical metadata mentions
+    formatted = formatted
+        .replace(/\[Chunk \d+\]/gi, '')
+        .replace(/similarity[:\s]*[\d.]+/gi, '')
+        .replace(/chunk[s]?/gi, '')
+        .replace(/vector[s]?/gi, '')
+        .replace(/embedding[s]?/gi, '');
+
+    // Ensure response starts with a friendly introduction if it doesn't already
+    const friendlyStarters = [
+        /^(here'?s|sure|great|absolutely|of course|certainly)/i,
+        /^(let me|i'll|i can)/i,
+    ];
+    const hasFriendlyStart = friendlyStarters.some(pattern => pattern.test(formatted));
+    
+    if (!hasFriendlyStart && !formatted.match(/^#/)) {
+        // Add a friendly introduction if the response doesn't start with one
+        formatted = `Here's what I found about your question:\n\n${formatted}`;
+    }
+
+    // Add emojis to markdown headers (###) for visual appeal
+    const emojiMap: { [key: string]: string } = {
+        'regulation': '⚖️',
+        'policy': '📘',
+        'requirement': '📋',
+        'process': '🔄',
+        'permit': '📄',
+        'license': '📜',
+        'mining': '⛏️',
+        'mineral': '🪙',
+        'resource': '💎',
+        'compliance': '✅',
+        'summary': '📝',
+        'overview': '👁️',
+        'key': '🔑',
+        'important': '⚠️',
+        'note': '📌',
+    };
+
+    // Add emojis to headers based on keywords
+    formatted = formatted.replace(/^(###?)\s+(.+)$/gm, (match, hashes, title) => {
+        const lowerTitle = title.toLowerCase();
+        for (const [keyword, emoji] of Object.entries(emojiMap)) {
+            if (lowerTitle.includes(keyword)) {
+                return `${hashes} ${emoji} ${title}`;
+            }
+        }
+        return match; // Keep original if no match
+    });
+
+    // Extract and format clean source names
+    const uniqueSources = Array.from(new Set(chunks.map(c => c.source)))
+        .map(source => cleanSourceName(source))
+        .filter((name): name is string => name !== null && name.length > 0);
+
+    // Add clean sources footer if sources exist
+    if (uniqueSources.length > 0) {
+        const sourcesText = uniqueSources.length === 1
+            ? `**Source:** ${uniqueSources[0]}`
+            : `**Sources:**\n${uniqueSources.map(s => `- ${s}`).join('\n')}`;
+        
+        formatted = `${formatted}\n\n---\n\n${sourcesText}`;
+    }
+
+    return formatted.trim();
+}
+
+/**
+ * Cleans a source name by removing file paths, extensions, and technical prefixes.
+ */
+function cleanSourceName(source: string): string | null {
+    if (!source) return null;
+
+    // Remove gs:// bucket paths
+    let cleaned = source.replace(/^gs:\/\/[^\/]+\//, '');
+    
+    // Remove .pdf, .docx, etc. extensions
+    cleaned = cleaned.replace(/\.(pdf|docx?|txt|md)$/i, '');
+    
+    // Remove common path prefixes
+    cleaned = cleaned.replace(/^(\.\/|\.\.\/|\/)/, '');
+    
+    // Extract just the filename if it's a path
+    const parts = cleaned.split('/');
+    cleaned = parts[parts.length - 1];
+    
+    // Clean up underscores and hyphens, make it title case
+    cleaned = cleaned
+        .replace(/[_-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    
+    // Convert to title case (simple version)
+    cleaned = cleaned.split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+
+    return cleaned || null;
+}
+
 // RAGResponse interface is not used in this function, but kept for clarity.
 interface RAGResponse {
     answer: string;
@@ -70,27 +183,33 @@ export async function generateGroundedResponse(
         
         const accessToken = accessTokenResult.access_token;
 
-        // --- 2. System Instruction (The Prompt) ---
-        const SYSTEM_INSTRUCTION = `You are a helpful expert assistant specializing in mining regulations and compliance in Zambia. Your role is to provide accurate, comprehensive answers based solely on the provided context documents. Follow these guidelines:
-1. Your answer MUST be based ONLY on the provided context/chunks.
-2. If the context does not contain enough information, explicitly state this limitation.
-3. You MUST cite the source of every claim, fact, or statement using the format [Source: X], where X is the exact value of the 'source' field provided in the chunk metadata.
-4. Structure your response clearly and professionally.
-5. Always include a disclaimer that this is an explanation based on the provided documents, not formal legal advice, and users should consult qualified legal professionals for their specific situation.`;
+        // --- 2. Prepare documents for the prompt ---
+        // Map chunks to docs format, extracting just the text content
+        const docs = retrievedChunks.map((chunk) => ({
+            text: chunk.content,
+            source: chunk.source,
+            pageNumber: chunk.pageNumber,
+        }));
 
-        // --- 3. Construct the final prompt string ---
-        let prompt = `${SYSTEM_INSTRUCTION}\n\nCONTEXT:\nThe following are relevant document chunks retrieved for answering your question:\n\n`;
-        
-        retrievedChunks.forEach((chunk, index) => {
-            prompt += `[Chunk ${index + 1} - Source: ${chunk.source}]\n`;
-            if (chunk.pageNumber) {
-                prompt += `Page: ${chunk.pageNumber}\n`;
-            }
-            prompt += `${chunk.content}\n\n`;
-        });
+        // --- 3. Construct the conversational prompt ---
+        const userPrompt = `
+You are **MineWise Assistant**, a knowledgeable and friendly AI specializing in mining and resource policy.
 
-        prompt += `\nQUESTION:\n${query}\n\n`;
-        prompt += 'Please provide a comprehensive answer based on the context above, ensuring all claims are properly cited with [Source: X] format.';
+Your goals:
+- Write in a clear, conversational tone.
+- Use short sections and bullet points for readability.
+- Refer to sources as "Source Document" instead of showing file paths.
+- End with a brief summary of the main insights.
+- Never mention technical processing details like 'chunks' or 'similarity'.
+
+Now, answer the user's question using only the context below.
+
+**Question:**
+${query}
+
+**Relevant Documents:**
+${docs.map(d => d.text).join("\n\n")}
+`;
 
         // --- 4. Prepare the request for Gemini Generative AI API ---
         // For Gemini models, use the generateContent format
@@ -98,7 +217,7 @@ export async function generateGroundedResponse(
             contents: [
                 {
                     role: 'user',
-                    parts: [{ text: prompt }],
+                    parts: [{ text: userPrompt }],
                 },
             ],
             generationConfig: {
@@ -155,8 +274,11 @@ export async function generateGroundedResponse(
             throw new Error('Model returned empty response');
         }
 
-        logger.log(`✅ Generated response (${finalResponse.length} characters)`);
-        return finalResponse;
+        // --- 6. Post-process the response for user-friendly formatting ---
+        const formattedResponse = formatUserFriendlyResponse(finalResponse, retrievedChunks);
+
+        logger.log(`✅ Generated response (${formattedResponse.length} characters)`);
+        return formattedResponse;
 
     } catch (error: unknown) { 
         const errorMessage = error instanceof Error ? error.message : String(error);

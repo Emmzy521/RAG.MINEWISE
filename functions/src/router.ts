@@ -137,17 +137,39 @@ export const appRouter = t.router({
         const answer = await generateGroundedResponse(query, retrievedChunks);
 
         // Extract unique citations and prepare sources array
+        // Clean source names for user-friendly display
+        const cleanSourceName = (source: string): string => {
+          if (!source) return '';
+          // Remove gs:// bucket paths
+          let cleaned = source.replace(/^gs:\/\/[^\/]+\//, '');
+          // Remove file extensions
+          cleaned = cleaned.replace(/\.(pdf|docx?|txt|md)$/i, '');
+          // Extract filename and convert to title case
+          const parts = cleaned.split('/');
+          cleaned = parts[parts.length - 1]
+            .replace(/[_-]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+          return cleaned;
+        };
+
         const citations = Array.from(
-          new Set(retrievedChunks.map((chunk) => chunk.source))
-        ).sort();
+          new Set(retrievedChunks.map((chunk) => cleanSourceName(chunk.source)))
+        )
+          .filter(name => name.length > 0)
+          .sort();
 
         // Prepare sources array with detailed information for frontend display
+        // Note: score (similarity) is kept for internal use but should not be displayed to users
         const sources = retrievedChunks.map((chunk) => ({
           documentId: chunk.documentId,
           chunkId: chunk.id,
           content: chunk.content,
-          score: chunk.similarity,
-          source: chunk.source,
+          score: chunk.similarity, // Kept for internal use, frontend should not display
+          source: cleanSourceName(chunk.source), // Clean source name for display
           pageNumber: chunk.pageNumber,
         }));
 
