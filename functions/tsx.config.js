@@ -15,8 +15,10 @@ export default {
       '**/*.log',
       '**/.env.local',
       '**/.env.*.local',
+      '**/apps/web/**', // Ignore frontend changes
+      '**/packages/**', // Ignore package changes unless needed
     ],
-    // Add a small delay before restarting to batch file changes
-    debounce: 300,
+    // Increase debounce to prevent rapid restarts during active requests
+    debounce: 1000,
   },
 };

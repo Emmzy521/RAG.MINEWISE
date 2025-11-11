@@ -55,26 +55,35 @@ export default function Login() {
 
   return (
     <div className="relative flex items-center justify-center min-h-screen bg-background overflow-hidden">
-      {/* Background Image with enhanced styling */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-105 transition-transform duration-700 ease-out"
+      {/* Background Image with enhanced styling - HD quality */}
+      <img 
+        src="/login1.png" 
+        alt="" 
+        className="absolute inset-0 w-full h-full object-cover scale-105 transition-transform duration-700 ease-out"
         style={{
-          backgroundImage: 'url(/mine-tunnel-bg.jpg)',
-          filter: 'brightness(0.7) contrast(1.1)',
+          imageRendering: 'high-quality',
+          WebkitImageRendering: '-webkit-optimize-contrast',
+          filter: 'brightness(1) contrast(1.1)',
+          transform: 'scale(1.05)',
+          willChange: 'transform',
+          minWidth: '100%',
+          minHeight: '100%',
         }}
+        loading="eager"
+        fetchPriority="high"
       />
       
-      {/* Gradient overlay - darker at edges, lighter in center for focus */}
-      <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/60 to-black/70" />
+      {/* Gradient overlay - minimal overlay for maximum visibility */}
+      <div className="absolute inset-0 bg-gradient-to-br from-black/20 via-black/15 to-black/20" />
       <div 
         className="absolute inset-0"
         style={{
-          background: 'radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.4) 50%, rgba(0, 0, 0, 0.8) 100%)',
+          background: 'radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.1) 50%, rgba(0, 0, 0, 0.2) 100%)',
         }}
       />
       
       {/* Subtle vignette effect */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent" />
       
       {/* Radial gradient background glow - enhanced */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

@@ -1,30 +1,81 @@
 import { auth } from './firebase';
 
-// API URL - Force use of Vite proxy for local development
-// Override any env variable to use proxy in development
-// The proxy in vite.config.ts forwards /api to http://localhost:5001/api
-// This avoids CORS issues since browser sees same-origin request
+// API URL Configuration
+// - Development: Uses Vite proxy (/api) which forwards to http://localhost:5001/api
+// - Production: Uses VITE_API_URL from .env.production or falls back to /api
 const API_URL = import.meta.env.DEV 
-  ? '/api'  // Always use proxy in development
-  : (import.meta.env.VITE_FUNCTIONS_URL || '/api');
+  ? '/api'  // Always use proxy in development (avoids CORS issues)
+  : (import.meta.env.VITE_API_URL || '/api');
 
 // Debug: Log what URL we're using
 if (import.meta.env.DEV) {
   console.log('🔧 API URL configured:', API_URL, '(using Vite proxy)');
+} else if (import.meta.env.VITE_API_URL) {
+  console.log('🔧 API URL configured:', API_URL, '(production)');
+}
+
+// Retry logic for handling connection resets during server restarts
+async function fetchWithRetry(
+  endpoint: string,
+  options: RequestInit,
+  maxRetries: number = 3,
+  retryDelay: number = 1000
+): Promise<Response> {
+  let lastError: any;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(endpoint, options);
+      
+      // If we get a response (even if not ok), don't retry
+      // Only retry on network errors
+      return response;
+    } catch (error: any) {
+      lastError = error;
+      
+      // Check if it's a connection reset or network error that might be recoverable
+      const isRetryableError = 
+        error.message === 'Failed to fetch' ||
+        error.name === 'TypeError' ||
+        error.message?.includes('ECONNRESET') ||
+        error.message?.includes('network') ||
+        error.message?.includes('connection');
+      
+      if (!isRetryableError || attempt === maxRetries - 1) {
+        throw error;
+      }
+      
+      // Wait before retrying, with exponential backoff
+      const delay = retryDelay * Math.pow(2, attempt);
+      console.log(`⚠️ Request failed (attempt ${attempt + 1}/${maxRetries}), retrying in ${delay}ms...`, error.message);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError;
 }
 
 export async function apiCall<T>(procedure: string, input?: any): Promise<T> {
   const user = auth.currentUser;
   const token = await user?.getIdToken();
 
-  // If API_URL already includes /api, use it directly; otherwise append /api
-  const endpoint = API_URL.includes('/api') ? API_URL : `${API_URL}/api`;
+  // Construct endpoint URL
+  // Production URLs might already include /api, or might be the base URL
+  // Development uses /api which is handled by Vite proxy
+  let endpoint: string;
+  if (API_URL.startsWith('http')) {
+    // Production URL - check if it already ends with /api
+    endpoint = API_URL.endsWith('/api') ? API_URL : `${API_URL}/api`;
+  } else {
+    // Development - use as-is (will be proxied by Vite)
+    endpoint = API_URL;
+  }
   
   const requestBody = { procedure, input };
   console.log('🌐 API Request:', { endpoint, procedure, input });
   
   try {
-    const response = await fetch(endpoint, {
+    const response = await fetchWithRetry(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -5,6 +5,7 @@ import { auth } from '../lib/firebase';
 import { Button } from './ui/button';
 import { LogOut, Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,6 +13,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const t = useTranslation();
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -26,7 +28,7 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex flex-col min-h-screen bg-background">
       <nav className="border-b border-cyan-400/20 bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -36,7 +38,7 @@ export default function Layout({ children }: LayoutProps) {
                 variant="ghost"
                 size="icon"
                 onClick={openDrawer}
-                className="text-gray-300 hover:text-cyan-400 hover:bg-cyan-400/10"
+                className="text-gray-700 dark:text-gray-300 hover:text-cyan-400 hover:bg-cyan-400/10"
                 aria-label="Open menu"
               >
                 <Menu className="w-5 h-5" />
@@ -52,9 +54,9 @@ export default function Layout({ children }: LayoutProps) {
             
             {/* Right side - Sign Out */}
             <div className="w-32 flex justify-end">
-              <Button variant="ghost" onClick={handleSignOut} className="flex items-center space-x-2 text-gray-300 hover:text-cyan-400 hover:bg-cyan-400/10">
+              <Button variant="ghost" onClick={handleSignOut} className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-cyan-400 hover:bg-cyan-400/10">
                 <LogOut className="w-4 h-4" />
-                <span>Sign Out</span>
+                <span>{t('sidebar.signOut')}</span>
               </Button>
             </div>
           </div>
@@ -62,10 +64,22 @@ export default function Layout({ children }: LayoutProps) {
       </nav>
       
       {/* Drawer Menu */}
-      <Sidebar isOpen={isDrawerOpen} onClose={closeDrawer} />
+      <Sidebar 
+        isOpen={isDrawerOpen} 
+        onClose={closeDrawer}
+        onNewChat={() => {
+          window.dispatchEvent(new CustomEvent('sidebar:newChat'));
+        }}
+        onClearConversation={() => {
+          window.dispatchEvent(new CustomEvent('sidebar:clearConversation'));
+        }}
+        onLoadQuery={(query: string) => {
+          window.dispatchEvent(new CustomEvent('sidebar:loadQuery', { detail: { query } }));
+        }}
+      />
       
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="flex-1 flex flex-col">
         {children}
       </main>
     </div>
