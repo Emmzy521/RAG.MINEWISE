@@ -1,24 +1,42 @@
 import { auth } from './firebase';
 
-// API URL - Force use of Vite proxy for local development
-// Override any env variable to use proxy in development
-// The proxy in vite.config.ts forwards /api to http://localhost:5001/api
-// This avoids CORS issues since browser sees same-origin request
-const API_URL = import.meta.env.DEV 
-  ? '/api'  // Always use proxy in development
-  : (import.meta.env.VITE_FUNCTIONS_URL || '/api');
+// API URL - Uses environment variable for both development and production
+// Development: http://localhost:5001/minewise-ai-4a4da/us-central1/api (Firebase Functions emulator)
+// Production: https://api-tkaqtnga6a-uc.a.run.app (Cloud Run)
+
+// Determine API base URL with proper fallbacks
+// Priority: 1. VITE_API_URL env var, 2. Production/Dev detection, 3. Hardcoded fallback
+let API_BASE: string;
+
+if (import.meta.env.VITE_API_URL) {
+  // Use explicit environment variable if set
+  API_BASE = import.meta.env.VITE_API_URL;
+} else if (import.meta.env.PROD) {
+  // Production mode - use Cloud Run URL
+  API_BASE = 'https://api-tkaqtnga6a-uc.a.run.app';
+} else {
+  // Development mode - use local emulator
+  API_BASE = 'http://localhost:5001/minewise-ai-4a4da/us-central1/api';
+}
+
+// Log configuration for debugging
+console.log('🔧 API Configuration:', {
+  mode: import.meta.env.PROD ? 'production' : 'development',
+  envVar: import.meta.env.VITE_API_URL || '(not set)',
+  resolved: API_BASE,
+  PROD: import.meta.env.PROD,
+  DEV: import.meta.env.DEV,
+});
 
 // Debug: Log what URL we're using
-if (import.meta.env.DEV) {
-  console.log('🔧 API URL configured:', API_URL, '(using Vite proxy)');
-}
+console.log('🔧 API URL configured:', API_BASE, import.meta.env.DEV ? '(development)' : '(production)');
 
 export async function apiCall<T>(procedure: string, input?: any): Promise<T> {
   const user = auth.currentUser;
   const token = await user?.getIdToken();
 
-  // If API_URL already includes /api, use it directly; otherwise append /api
-  const endpoint = API_URL.includes('/api') ? API_URL : `${API_URL}/api`;
+  // Use the API base URL directly (it already includes the full path)
+  const endpoint = API_BASE;
   
   const requestBody = { procedure, input };
   console.log('🌐 API Request:', { endpoint, procedure, input });
@@ -62,7 +80,7 @@ export async function apiCall<T>(procedure: string, input?: any): Promise<T> {
         if (responseText.trim().length > 0) {
           errorMessage = responseText;
         } else if (response.status === 0 || response.status === 503) {
-          errorMessage = 'Cannot connect to server. Make sure the backend server is running on http://localhost:5001';
+          errorMessage = `Cannot connect to server. Make sure the backend server is running at ${API_BASE}`;
         } else if (response.status === 401) {
           errorMessage = 'Unauthorized. Please log in again.';
         } else if (response.status === 404) {
@@ -80,10 +98,10 @@ export async function apiCall<T>(procedure: string, input?: any): Promise<T> {
     if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
       console.error('❌ Network Error:', error);
       throw new Error(
-        'Cannot connect to the API server. Please ensure:\n' +
-        '1. The backend server is running (cd functions && pnpm dev)\n' +
-        '2. The server is accessible at http://localhost:5001\n' +
-        '3. Check browser console for CORS errors'
+        `Cannot connect to the API server. Please ensure:\n` +
+        `1. The backend server is running (cd functions && pnpm dev)\n` +
+        `2. The server is accessible at ${API_BASE}\n` +
+        `3. Check browser console for CORS errors`
       );
     }
     throw error;

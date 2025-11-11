@@ -12,14 +12,9 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5001',
-        changeOrigin: true,
-        secure: false,
-        ws: false,
-      },
-    },
+    // Proxy removed - using direct API URLs from environment variables
+    // Development: http://localhost:5001/minewise-ai-4a4da/us-central1/api
+    // Production: https://api-tkaqtnga6a-uc.a.run.app
   },
 });
 
