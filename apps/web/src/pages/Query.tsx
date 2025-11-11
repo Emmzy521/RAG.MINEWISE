@@ -81,6 +81,16 @@ export default function Query() {
         </CardContent>
       </Card>
 
+      <Card className="bg-card/30 backdrop-blur-sm border-cyan-400/10">
+        <CardContent className="pt-6">
+          <p className="text-sm text-gray-400">
+            <strong className="text-white">Disclaimer:</strong> This is an explanation based on the provided documents,
+            not formal legal advice. Please consult with qualified legal professionals for your
+            specific situation.
+          </p>
+        </CardContent>
+      </Card>
+
       {error && (
         <Card className="border-destructive bg-card/50 backdrop-blur-sm">
           <CardContent className="pt-6">
@@ -146,16 +156,6 @@ export default function Query() {
               </CardContent>
             </Card>
           )}
-
-          <Card className="bg-card/30 backdrop-blur-sm border-cyan-400/10">
-            <CardContent className="pt-6">
-              <p className="text-sm text-gray-400">
-                <strong className="text-white">Disclaimer:</strong> This is an explanation based on the provided documents,
-                not formal legal advice. Please consult with qualified legal professionals for your
-                specific situation.
-              </p>
-            </CardContent>
-          </Card>
         </>
       )}
     </div>

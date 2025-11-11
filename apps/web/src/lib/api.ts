@@ -1,48 +1,77 @@
 import { auth } from './firebase';
 
-// API URL - Uses environment variable for both development and production
-// Development: http://localhost:5001/minewise-ai-4a4da/us-central1/api (Firebase Functions emulator)
-// Production: https://api-tkaqtnga6a-uc.a.run.app (Cloud Run)
-
-// Determine API base URL with proper fallbacks
-// Priority: 1. VITE_API_URL env var, 2. Production/Dev detection, 3. Hardcoded fallback
-let API_BASE: string;
-
-if (import.meta.env.VITE_API_URL) {
-  // Use explicit environment variable if set
-  API_BASE = import.meta.env.VITE_API_URL;
-} else if (import.meta.env.PROD) {
-  // Production mode - use Cloud Run URL
-  API_BASE = 'https://api-tkaqtnga6a-uc.a.run.app';
-} else {
-  // Development mode - use local emulator
-  API_BASE = 'http://localhost:5001/minewise-ai-4a4da/us-central1/api';
-}
-
-// Log configuration for debugging
-console.log('🔧 API Configuration:', {
-  mode: import.meta.env.PROD ? 'production' : 'development',
-  envVar: import.meta.env.VITE_API_URL || '(not set)',
-  resolved: API_BASE,
-  PROD: import.meta.env.PROD,
-  DEV: import.meta.env.DEV,
-});
+// API URL Configuration
+// - If VITE_API_URL is set, use it (works in both dev and production)
+// - Development: Falls back to Vite proxy (/api) which forwards to http://localhost:5001/api
+// - Production: Falls back to /api
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : '/api');
 
 // Debug: Log what URL we're using
-console.log('🔧 API URL configured:', API_BASE, import.meta.env.DEV ? '(development)' : '(production)');
+if (import.meta.env.VITE_API_URL) {
+  console.log('🔧 API URL configured:', API_URL, import.meta.env.DEV ? '(development with custom URL)' : '(production)');
+} else if (import.meta.env.DEV) {
+  console.log('🔧 API URL configured:', API_URL, '(using Vite proxy to localhost:5001)');
+} else {
+  console.log('🔧 API URL configured:', API_URL, '(production default)');
+}
+
+// Retry logic for handling connection resets during server restarts
+async function fetchWithRetry(
+  endpoint: string,
+  options: RequestInit,
+  maxRetries: number = 3,
+  retryDelay: number = 1000
+): Promise<Response> {
+  let lastError: any;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(endpoint, options);
+      
+      // If we get a response (even if not ok), don't retry
+      // Only retry on network errors
+      return response;
+    } catch (error: any) {
+      lastError = error;
+      
+      // Check if it's a connection reset or network error that might be recoverable
+      const isRetryableError = 
+        error.message === 'Failed to fetch' ||
+        error.name === 'TypeError' ||
+        error.message?.includes('ECONNRESET') ||
+        error.message?.includes('network') ||
+        error.message?.includes('connection');
+      
+      if (!isRetryableError || attempt === maxRetries - 1) {
+        throw error;
+      }
+      
+      // Wait before retrying, with exponential backoff
+      const delay = retryDelay * Math.pow(2, attempt);
+      console.log(`⚠️ Request failed (attempt ${attempt + 1}/${maxRetries}), retrying in ${delay}ms...`, error.message);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError;
+}
 
 export async function apiCall<T>(procedure: string, input?: any): Promise<T> {
   const user = auth.currentUser;
   const token = await user?.getIdToken();
 
-  // Use the API base URL directly (it already includes the full path)
-  const endpoint = API_BASE;
+  // Construct endpoint URL
+  // Production URLs: Use as-is (Cloud Run service is at root)
+  // Development: Use /api which is handled by Vite proxy
+  const endpoint: string = API_URL.startsWith('http')
+    ? (API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL) // Production URL - remove trailing slash if present
+    : API_URL; // Development - use as-is (will be proxied by Vite to localhost:5001/api)
   
   const requestBody = { procedure, input };
   console.log('🌐 API Request:', { endpoint, procedure, input });
   
   try {
-    const response = await fetch(endpoint, {
+    const response = await fetchWithRetry(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -80,7 +109,7 @@ export async function apiCall<T>(procedure: string, input?: any): Promise<T> {
         if (responseText.trim().length > 0) {
           errorMessage = responseText;
         } else if (response.status === 0 || response.status === 503) {
-          errorMessage = `Cannot connect to server. Make sure the backend server is running at ${API_BASE}`;
+          errorMessage = `Cannot connect to server. Make sure the backend server is running at ${endpoint}`;
         } else if (response.status === 401) {
           errorMessage = 'Unauthorized. Please log in again.';
         } else if (response.status === 404) {
@@ -100,7 +129,7 @@ export async function apiCall<T>(procedure: string, input?: any): Promise<T> {
       throw new Error(
         `Cannot connect to the API server. Please ensure:\n` +
         `1. The backend server is running (cd functions && pnpm dev)\n` +
-        `2. The server is accessible at ${API_BASE}\n` +
+        `2. The server is accessible at ${endpoint}\n` +
         `3. Check browser console for CORS errors`
       );
     }

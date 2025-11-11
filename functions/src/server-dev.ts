@@ -89,6 +89,26 @@ app.use(cors({
 
 app.use(express.json());
 
+// Graceful shutdown handling - track active requests
+let isShuttingDown = false;
+const activeRequests = new Set<Response>();
+
+// Track active requests - must be before route handlers
+app.use((req: Request, res: Response, next) => {
+  if (isShuttingDown) {
+    res.status(503).json({ error: 'Server is shutting down' });
+    return;
+  }
+  activeRequests.add(res);
+  res.on('finish', () => {
+    activeRequests.delete(res);
+  });
+  res.on('close', () => {
+    activeRequests.delete(res);
+  });
+  next();
+});
+
 // Handle OPTIONS preflight requests
 app.options('/api', (req: Request, res: Response) => {
   res.header('Access-Control-Allow-Origin', '*');
